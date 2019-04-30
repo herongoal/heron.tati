@@ -1,0 +1,346 @@
+#include "heron_define.h"
+#include "heron_logger.h"
+#include "heron_network.h"
+#include "heron_routine.h"
+#include <sys/epoll.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+
+namespace   heron{namespace tati{
+const int       tcp_listen_routine::s_reuse_port = 1;
+tcp_listen_routine      *tcp_listen_routine::create(const char *ipaddr, uint16_t port)
+{
+        struct sockaddr_in  addr = {AF_INET, htons(port), {0u},
+                        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+
+        if(0 == inet_aton(ipaddr, &addr.sin_addr))
+        {
+                log_error( "tcp_listen_routine.inet_aton error,ipaddr=%s",
+                                errno, strerror(errno));
+                return  nullptr;
+        }
+
+        int     fd = socket(AF_INET, SOCK_STREAM, 0);
+        if(fd < 0)
+        {
+                log_error( "tcp_listen_routine.socket errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                return  nullptr;
+        }
+
+        if(-1 == fcntl(fd, F_SETFL, O_NONBLOCK))
+        {
+                log_error( "tcp_listen_routine.fcntl errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                ::close(fd);
+                return  nullptr;
+        }
+
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &s_reuse_port, sizeof(s_reuse_port));
+        if(0 != bind(fd, (struct sockaddr *)&addr, sizeof(addr)))
+        {
+                log_error( "tcp_listen_routine.bind errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                ::close(fd);
+                return  nullptr;
+        }
+
+        if(0 != listen(fd, 2000))
+        {
+                log_error( "tcp_listen_routine.listen errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                ::close(fd);
+                return  nullptr;
+        }
+        tcp_listen_routine *sr = new tcp_listen_routine(0, fd);
+        if(nullptr == sr) 
+        {   
+                log_error( "tcp_listen_routine.create bad_alloc,close fd=%d", fd);
+                ::close(fd);
+        }   
+        return  sr; 
+}
+
+tcp_listen_routine::~tcp_listen_routine()
+{
+        log_event( "~tcp_listen_routine");
+}
+
+uint    tcp_listen_routine::get_events()
+{
+        return  EPOLLIN;
+}
+
+void    heron_network_thread::react()
+{
+        inspect();
+        process_timers();
+
+	struct timespec timeout, remain;
+	timeout.tv_sec = 0;
+	timeout.tv_nsec = 1000 * 1000;
+	nanosleep(&timeout, &remain);
+
+        struct  epoll_event     arr_events[512];
+        uint    fetch_num = sizeof(arr_events) / sizeof(arr_events[0]);
+
+        if(m_routine_pool.entity_num() < fetch_num) fetch_num = m_routine_pool.entity_num();
+        if(fetch_num > 0)
+        {
+                int result = epoll_wait(m_epoll_fd, arr_events, fetch_num, 0);
+                if(result < 0 && errno != EINTR)
+                {
+                        log_error( "process_events.epoll_wait,epoll_fd=%d,fetch_num=%u,%d occurred,errmsg=%s",
+                                        m_epoll_fd, fetch_num,errno, strerror(errno));
+                }
+
+                for(int n = 0; n < result; ++n)
+                {
+                        struct  epoll_event *pe = arr_events + n;
+                        process_events(pe->data.u64, pe->events);
+                }
+	}
+}
+
+
+int64_t        heron_network_thread::gen_monotonic_ms()
+{
+        struct  timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return        ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+int     tcp_listen_routine::on_readable()
+{
+        while(true)
+        {
+                socklen_t       len = sizeof(struct     sockaddr_in);
+                struct  sockaddr_in     addr;
+
+                int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
+                if(conn_fd >= 0)
+                {
+                }
+                else if(EAGAIN == errno)
+                {
+                        break;
+                }
+                else
+                {
+                        log_error( "on_readable.accept, %d occurred", errno);
+                }
+        }
+        return  0;
+}
+
+void    tcp_listen_routine::on_error()
+{
+        log_error( "on_error was triggered");
+        close_fd();
+}
+
+
+int     heron_network_thread::init()
+{
+        if(socketpair(AF_UNIX, SOCK_DGRAM, 0, m_log_fds) < 0)
+        {
+                log_fatal("init.socketpair error,errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                return  -1;
+        }
+
+                dup2(m_log_fds[0], STDOUT_FILENO);
+                dup2(m_log_fds[0], STDERR_FILENO);
+
+        if(-1 == fcntl(m_log_fds[0], F_SETFL, O_NONBLOCK)
+                        || -1 == fcntl(m_log_fds[1], F_SETFL, O_NONBLOCK))
+        {
+                log_fatal("set nonblock failed,errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+                return  -1;
+        }
+
+        const socklen_t buf_len = 4 * 1024 * 1024;
+        setsockopt(m_log_fds[0], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
+        setsockopt(m_log_fds[0], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
+        setsockopt(m_log_fds[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
+        setsockopt(m_log_fds[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
+        return  0;
+}
+
+
+sint    heron_network_thread::send_message(ulong dest_routine_id, const void *data, unsigned len)
+{
+        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(dest_routine_id);
+
+        if(nullptr == rt)
+        {
+                log_error( "send_message to routine=%ld, not exist",
+                                dest_routine_id);
+                return        false;
+        }
+
+        if(!rt->append_send_data(data, len))
+        {
+                log_error( "send_message to routine=%ld, failed",
+                                dest_routine_id );
+                return        false;
+        }
+        return        true;
+}
+
+void* heron_network_thread::proxy_loop(void* arg)
+{
+                sigset_t        sig_set;
+                sigemptyset(&sig_set);
+                sigaddset(&sig_set, SIGTERM);
+                sigaddset(&sig_set, SIGQUIT);
+                sigaddset(&sig_set, SIGINT);
+                sigaddset(&sig_set, SIGHUP);
+                sigaddset(&sig_set, SIGPIPE);
+                sigaddset(&sig_set, SIGUSR1);
+                sigaddset(&sig_set, SIGUSR2);
+                sigaddset(&sig_set, SIGXFSZ);
+                sigaddset(&sig_set, SIGTRAP);
+                pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
+
+        return  (void *)0;
+}
+
+void        heron_network_thread::inspect()
+{
+        ulong monotonic_ms = gen_monotonic_ms();
+
+        for(uint n = 0; n < m_routine_pool.entity_num(); ++n)
+        {
+                heron_routine *rt = (heron_routine *)m_routine_pool.current_element();
+
+                if(rt->m_last_inspect_time + 20 < monotonic_ms)
+                {
+                        if(rt->m_del_flag || rt->inspect() < 0)
+                        {
+                                m_routine_pool.remove_element(rt->m_routine_id);
+                                delete        rt;
+                        }
+                        else
+                        {
+                                rt->m_last_inspect_time = gen_monotonic_ms();
+                        }
+                }
+                else
+                {
+                        break;
+                }
+                m_routine_pool.forward_element();
+        }
+}
+
+void    heron_network_thread::set_routine_timeout(ulong routine_id, int timeout_ms)
+{
+        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(routine_id);
+        if(nullptr != rt)
+        {
+                rt->m_timeout = timeout_ms;
+        }
+}
+
+sint    heron_network_thread::close_routine(ulong routine_id)
+{
+        heron_routine *rt = (heron_routine *)m_routine_pool.remove_element(routine_id);
+
+        if(nullptr != rt)
+        {
+                log_event("close_routine routine_id=%lu", routine_id);
+                unregister_events(m_epoll_fd, rt);
+                delete  rt;
+        }
+        else
+        {
+                log_error( "close_routine routine_id=%ld not found",
+                                routine_id);
+        }
+	return 0;
+}
+
+sint   heron_network_thread::add_routine(heron_routine *rt)
+{
+        m_routine_pool.insert_element(rt->m_routine_id, rt);
+
+        if(rt->get_events() != 0)
+        {
+                const int events = rt->get_events();
+                struct  epoll_event ev;
+                ev.events = events;
+                ev.data.u64 = rt->m_routine_id;
+
+                if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
+                {
+                        log_event("add_routine.epoll_ctl,events=%d",
+                                        events);
+                }
+                else
+                {
+                        log_error( "add_routine.epoll_ctl,events=%d, errno=%d",
+                                        events, errno);
+                }
+        }
+        else
+        {
+                log_event("add_routine no_events");
+        }
+
+        if(rt->m_proxy_id == m_proxy_id && rt->m_recv.data_len() > 0)
+        {
+        }
+}
+
+void    heron_network_thread::process_events(ulong routine_id, const unsigned events)
+{
+        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(routine_id);
+        if(nullptr == rt)
+        {
+                log_error("process_events,routine_id=%lu,events=%u",
+                                routine_id, events);
+                return        ;
+        }
+
+        if(events & EPOLLOUT)
+        {
+                rt->m_writable = true;
+                if(rt->m_writable)
+                {
+                        //delete writable event
+                        struct  epoll_event ev;
+                        ev.events = rt->get_events() & (~EPOLLOUT);
+                        ev.data.u64 = rt->m_routine_id;
+                        if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
+                        {
+                                log_error( "failed to depress writable=%u",
+                                                ev.events);
+                        }
+                }
+        }
+        bool need_close = false;
+        if(events & EPOLLIN)
+        {
+        }
+
+        if(events & EPOLLERR)
+        {
+                rt->m_close_mark = true;
+        }
+
+        if(events & EPOLLRDHUP)
+        {
+                //this is not even an error
+        }
+
+        if(events & EPOLLHUP)
+        {
+                rt->m_close_mark = true;
+        }
+}
+}}//namespace heron::tati
