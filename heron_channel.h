@@ -2,6 +2,7 @@
 #define _HERON_CHANNEL_H_
 
 
+#include "heron_define.h"
 #include <cstdlib>
 #include <atomic>
 
@@ -11,7 +12,7 @@ namespace heron{namespace tati{
 class   heron_channel
 {
 public:
-        static  heron_channel*    create(unsigned int capacity);
+        static  heron_channel*    create(uint capacity);
 
         heron_channel&    operator=(const heron_channel &b) = delete;
         heron_channel(const heron_channel &b) = delete;

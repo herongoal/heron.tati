@@ -11,15 +11,15 @@ namespace   heron{namespace tati{
 class   heron_pool{
 public:
         heron_pool(uint capacity):m_capacity(capacity){
-                m_inuse_list.m_elem = nullptr;
-                m_inuse_list.m_id = 0uLL;
-                m_inuse_list.m_prev = &m_inuse_list;
-                m_inuse_list.m_next = &m_inuse_list;
+                m_node_list.m_elem = nullptr;
+                m_node_list.m_id = 0uLL;
+                m_node_list.m_prev = &m_node_list;
+                m_node_list.m_next = &m_node_list;
 
-                m_cache_list.m_elem = nullptr;
-                m_cache_list.m_id = 0uLL;
-                m_cache_list.m_prev = &m_cache_list;
-                m_cache_list.m_next = &m_cache_list;
+                m_node_pool.m_elem = nullptr;
+                m_node_pool.m_id = 0uLL;
+                m_node_pool.m_prev = &m_node_pool;
+                m_node_pool.m_next = &m_node_pool;
         }
 
 	uint    entity_num() const
@@ -45,8 +45,8 @@ private:
 protected:
         unordered_map<ulong, tati_node_t*> m_index;
         uint            m_capacity;
-        tati_node_t     m_inuse_list;
-        tati_node_t     m_cache_list;
+        tati_node_t     m_node_list;
+        tati_node_t     m_node_pool;
 };
 }}//namespace heron::tati
 

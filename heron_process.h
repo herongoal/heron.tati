@@ -3,13 +3,14 @@
 
 
 #include "heron_define.h"
+#include <pthread.h>
 
 
 namespace   heron{namespace   tati{
-void    on_connected(ulong routine_id, uint events);
-void    on_closed(ulong routine_id, uint events);
-void    on_data(ulong routine_id, uint events);
-void    on_timer(ulong routine_id, uint events);
+void    on_connected(const heron_context &ctx);
+void    on_closed(const heron_context &ctx);
+void    on_data(const heron_context &ctx);
+void    on_timer(const heron_context &ctx);
 
 class	heron_process_thread{
 public:
@@ -18,6 +19,10 @@ public:
 	sint	process_timers();
 	sint	init();
 	sint	react();
+	static void  *start(void *arg);
+protected:
+	friend  class   heron_engine;
+	pthread_t    m_thread;
 };
 }}//namespace heron::tati
 

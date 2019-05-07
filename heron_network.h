@@ -5,6 +5,7 @@
 #include "heron_define.h"
 #include "heron_routine.h"
 #include "heron_pool.h"
+#include <pthread.h>
 
 
 using namespace std;
@@ -22,11 +23,14 @@ public:
 	sint	add_routine(heron_routine *rt);
         void    react();
 	sint	init();
-	void*	proxy_loop(void* arg);
+	static void*	start(void* arg);
 	heron_pool	m_routine_pool;
 	int	m_epoll_fd;
 	uint	m_proxy_id;
 	int	m_log_fds[2];
+protected:
+	friend  class   heron_engine;
+	pthread_t	m_thread;
 };
 class   tcp_listen_routine:public heron_routine{
     public:

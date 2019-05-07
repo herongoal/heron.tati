@@ -2,7 +2,6 @@
 
 
 #include <stdarg.h>
-#include <sys/epoll.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <fcntl.h>

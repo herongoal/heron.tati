@@ -1,17 +1,14 @@
-#include <iostream>
-#include <string>
+#include "heron_engine.h"
 
+
+using namespace heron::tati;
 using namespace std;
 
-namespace heron{
-namespace tati{
-class	A{
-string s;
-};
-}
-}
 
-int main()
+int main(int argc, char *argv[])
 {
-	heron::tati::A a;
+	heron_engine engine;
+	int result = engine.init();
+	engine.start_service();
+	engine.stop_service();
 }

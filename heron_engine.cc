@@ -104,7 +104,77 @@ int     heron_engine::init()
         return  0;
 }
 
-void    start_service()
+void	heron_engine::stop_threads()
+{
+	while(true){
+		join_threads
+	}
+
+	//stop all new connections
+	for(size_t n = 0; n < sizeof(m_network_threads)/sizeof(m_network_threads); ++n)
+	{
+		//stop new connection creation
+	}
+
+	//stop reading from connections
+	//process all the requests
+	//stop writing
+	//never accept more active querying
+	//call before_routine_closed()
+	//write last log
+	//stop logger
+	//jieguan logger
+	//exit
+}
+
+sint    heron_engine::start_heavy_work_threads()
+{
+	for(size_t idx=sizeof(m_heavy_work_threads)/sizeof(m_heavy_work_threads[0]);
+		idx>0; ++idx)
+        {
+                heron_heavy_work_thread &thread=m_heavy_work_threads[idx];
+                thread.init();
+                int ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
+                if (ret != 0){
+                        log_fatal("failed to create heavy work thread");
+                }
+                log_event("create heavy work thread finished");
+        }
+}
+
+sint    heron_engine::start_network_threads()
+{
+	for(size_t idx=sizeof(m_network_threads)/sizeof(m_network_threads[0]);
+		idx>0; ++idx)
+        {
+                heron_network_thread &thread=m_network_threads[idx];
+                thread.init();
+                int ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
+                if (ret != 0){
+                        log_fatal("failed to create network thread");
+                }
+                log_event("create network thread finished");
+        }
+}
+sint    heron_engine::start_threads()
+{
+	//passive
+	//start logger
+	//start heavy work thread, all the heavy work will be processed here.
+	//start process thread, //all the logic process will be procesed here.
+	//start network thread, //all the network process will be processed here.
+	//start listen
+	//start active workers
+
+	m_process_thread.init();
+	int ret = pthread_create(&m_process_thread.m_thread, nullptr, m_process_thread.start, &m_process_thread);
+	if (ret != 0){
+		log_fatal("failed to create process thread");
+	}
+	log_event("create process thread finished");
+}
+
+void    mask_signals()
 {
         struct sigaction        sa_interupted;
         

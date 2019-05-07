@@ -6,6 +6,8 @@
 #include "heron_logger.h"
 #include "heron_routine.h"
 #include "heron_network.h"
+#include "heron_process.h"
+#include "heron_worker.h"
 #include <signal.h>
 #include <string>
 
@@ -17,16 +19,14 @@ public:
         heron_engine(const string &log_file, log_level level, uint slice_kb);
         virtual ~heron_engine();
 
-	int init();
+	sint    init();
 
         static  heron_engine *get_instance()
         {
                 return  m_engine_instance;
         }
 
-        ulong   send_message(const string &addr, short port, const void *data, unsigned len);
-        ulong   send_message(heron_routine *session, const void *data, unsigned len);
-
+        ulong   send_message(const heron_context &ctx, const void *data, ushort len);
 
 	void	register_conn_handle_routine(conn_handle_routine handler);
 	void	register_data_handle_routine(data_handle_routine handler);
@@ -40,16 +40,28 @@ public:
         static  void    signal_handle(int sigid, siginfo_t *si, void *unused);
 
 
+	sint    start_heavy_work_threads();
+	sint    start_network_threads();
+	sint    start_threads();
+	void    stop_threads();
 	ulong   create_listen_routine(ulong label, const char *ipaddr, uint16_t port);
         ulong   create_channel(ulong label, const char *ipaddr, uint16_t port);
         ulong   start_service_at_port(ulong label, const char *ipaddr, uint16_t port);
         ulong   stop_service_at_port(ulong label, const char *ipaddr, uint16_t port);
 
 private:
+	/*
+		each network thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data
+		each heavy work thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data
+		logs were transfer from threads to main threads via channels as well. so socketpairs were created as well
+		contrl signals were transfer via socketpair.
+	*/
 	static heron_engine     *m_engine_instance;
-	heron_network_thread    m_net_threads;
 	log_level		m_log_level;
 	int	m_log_fds[2];
+	heron_process_thread     m_process_thread;
+	heron_network_thread     m_network_threads[4];
+	heron_heavy_work_thread  m_heavy_work_threads[2];
 };
 }}//namespace heron::tati
 

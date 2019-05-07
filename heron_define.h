@@ -47,6 +47,21 @@ ulong   gen_id(uchar scope, ulong seq){
         return strtoll(str + sizeof(str) - len, nullptr, 10);
 }
 
+struct  heron_routine_attr{
+    heron_routine_attr(ulong label, ulong ts):m_label(label),m_create_time(ts){}
+    heron_routine_attr& operator=(const heron_routine_attr &attr) = default;
+    heron_routine_attr(const heron_routine_attr &attr) = default;
+
+    ulong       m_label;
+    ulong       m_create_time;
+};
+
+struct  heron_routine_stat{
+        ulong        send_times;
+        ulong        recv_times;
+        ulong        send_bytes;
+        ulong        recv_bytes;
+};
 
 enum    heron_event{
         heron_socket_readable = 1 << 0,
@@ -68,48 +83,44 @@ enum	enm_directive{
 };
 
 enum	enm_state{
-	state_success = 0,
-	state_response_invalid = -21001,
-
-	state_recv_timeout     = -22001,
-	state_recv_peer_close  = -22002,
-	state_recv_failed      = -22003,
-
-	state_request_invalid  = -23001,
-
+	state_encode_req_ceased_longer_buffer_required  = -25003,
 	state_send_failed      = -24001,
 	state_send_peer_close  = -24002,
 	state_connect_timeout  = -24003,
 	state_connect_error    = -24004,
 	state_connect_reset    = -24005,
 
-	state_ceased_data_overlimit   = -25001,
-	state_ceased_method_overlimit = -25002,
-	state_ceased_buffer_full      = -25003,
+	state_request_invalid  = -23001,
+	state_response_invalid = -21001,
+	state_recv_timeout     = -22001,
+	state_recv_peer_close  = -22002,
+	state_recv_failed      = -22003,
+	state_success = 0,
 };
 
+struct  heron_context{
+        heron_routine_attr      attr;
+        heron_routine_stat      stat;
+};
 
-struct  rpc_segment_meta{
-	rpc_segment_meta(uint req_seq, uint rsp_seq):req_sequence(req_seq), rsp_sequence(rsp_seq)
+struct  heron_segment_meta{
+	heron_segment_meta(uint req_seq, uint rsp_seq):prefix_tantalum(distinct_constant_tantalum),
+		req_sequence(req_seq), rsp_sequence(rsp_seq)
         {
-
         }
-
-        const ulong    prefix_tantalum = distinct_constant_tantalum;
+        ulong   prefix_tantalum;
         uint    req_sequence;
         uint    rsp_sequence;
 
         struct{
-                uchar version;
-                uchar type;
-                uchar flag;
-                uchar serial;
+                uchar   version;
+                uchar   type;
+                uchar   flag;
+                uchar   ordinal;
         }segment;
 
-        struct{
-                uchar routine;
-                uchar data[3];
-        }length;
+	uchar   routine_length;
+	ushort  payload_length;
 };
 
 struct  rpc_segment_boundary{

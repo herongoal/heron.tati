@@ -6,19 +6,19 @@ namespace heron{namespace tati{
 uint    encode(void *buf, uint buf_len, const string &method, void *data, uint data_len)
 {
         uchar *ptr = static_cast<uchar *>(buf);
-        rpc_segment_meta meta(0, 0);
+        heron_segment_meta meta(0, 0);
 
         uint len_required = sizeof(meta);
 
         if(len_required >= buf_len)
         {
-                return  state_ceased_buffer_full;
+                return  state_encode_req_ceased_longer_buffer_required;
         }
         memcpy(ptr, &meta, sizeof(meta));
 
         if(len_required + method.length() + data_len + sizeof(rpc_segment_boundary) > buf_len)
         {
-                return  state_ceased_buffer_full;
+                return  state_encode_req_ceased_longer_buffer_required;
         }
 
         for(uint n = 0; n < method.size(); ++n)

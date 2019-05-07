@@ -15,31 +15,12 @@ typedef  void    (*conn_handle_routine)(heron_routine *rt, heron_event ev);
 typedef  void    (*data_handle_routine)(heron_routine *rt, heron_event ev);
 typedef  void    (*time_handle_routine)(heron_routine *rt, heron_event ev);
 
-struct	proxy_info{
-    ulong proxy_id;
-};
-
-struct  routine_attr{
-    routine_attr(ulong label, ulong ts):m_label(label),m_create_time(ts){}
-    routine_attr& operator=(const routine_attr &attr) = default;
-    routine_attr(const routine_attr &attr) = default;
-
-    ulong       m_label;
-    ulong       m_create_time;
-};
-
 void    unregister_events(sint epoll_fd, heron_routine *rt);
 
-struct  routine_stat{
-        ulong        send_times;
-        ulong        recv_times;
-        ulong        send_bytes;
-        ulong        recv_bytes;
-};
 
 class        heron_routine{
 public:
-        heron_routine(ulong label, int fd);
+        heron_routine(ulong label, sint fd);
         virtual         ~heron_routine();
 
         virtual     int     on_event(heron_event ev);
@@ -84,8 +65,8 @@ public:
 	bool		m_del_flag;
         ulong           m_timeout;
         uint            m_proxy_id;
-        routine_attr            m_attr;
-        routine_stat            m_stat;
+        heron_routine_attr            m_attr;
+        heron_routine_stat            m_stat;
         struct  sockaddr_in     m_peer_addr;
 
         bool                    m_writable;
@@ -96,7 +77,7 @@ public:
         ulong                   m_last_inspect_time;
 };
 
-class heron_tcp_routine: public heron_routine{
+class   heron_tcp_routine: public heron_routine{
 public:
 	static  heron_tcp_routine*      create(uint label, int fd);
         heron_tcp_routine();
