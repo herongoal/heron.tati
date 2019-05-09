@@ -106,6 +106,46 @@ int     heron_engine::init()
 
 void	heron_engine::stop_threads()
 {
+	//phase stop independence jobs
+	//timers
+	//parent id=0(udp passive sessions(stop reading),passive tcp sessions（stop reading）, listening,parent =0 periodic timers) stop
+	//if no parent, then close(then set all it's created parent=0)
+	
+	//shuangxiang say good by
+	
+	//files
+	//active sessions: ref count() after ref count=0, then close; after sending via a channel, increase 1, recving resp, decrease 1
+	
+	/*
+	 * stop network thread(set no accepting, no reading request for passive conns, close after all data sent)
+	 *
+	 **long connections
+	 * periodic tasks close
+	 * periodic timers stop
+	 * timers close
+	 * heron_process stop reading
+	 * heron_process stop register timers
+	 * heron_process stop creating channels
+	 * heron_process stop active sending
+	 * pthread_join heron_process
+	 *
+	 * phase 2 stop dependented 
+	 *
+	 *
+	 *
+	 *
+	 ///////////////////////when to start the phase 2
+	 * worker thread set flag(exit after empty)
+	 * stop network thread()
+	 * stop utilssssssss
+	 *
+	 *
+	 *
+	 ///////////////////////when to start the phase 3
+	 //resource clear
+	 *
+	 *
+	 */
 	while(true){
 		join_threads
 	}
@@ -125,6 +165,7 @@ void	heron_engine::stop_threads()
 	//stop logger
 	//jieguan logger
 	//exit
+	//stop channels
 }
 
 sint    heron_engine::start_heavy_work_threads()
@@ -165,6 +206,9 @@ sint    heron_engine::start_threads()
 	//start network thread, //all the network process will be processed here.
 	//start listen
 	//start active workers
+	//create socketpairs
+	//create channels
+	//register channels
 
 	m_process_thread.init();
 	int ret = pthread_create(&m_process_thread.m_thread, nullptr, m_process_thread.start, &m_process_thread);
