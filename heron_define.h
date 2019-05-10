@@ -82,20 +82,18 @@ enum	enm_directive{
 	directive_send_msg = 11,
 };
 
-enum	enm_state{
-	state_encode_req_ceased_longer_buffer_required  = -25003,
-	state_send_failed      = -24001,
-	state_send_peer_close  = -24002,
-	state_connect_timeout  = -24003,
-	state_connect_error    = -24004,
-	state_connect_reset    = -24005,
-
-	state_request_invalid  = -23001,
-	state_response_invalid = -21001,
-	state_recv_timeout     = -22001,
-	state_recv_peer_close  = -22002,
-	state_recv_failed      = -22003,
-	state_success = 0,
+struct  heron_result_state{
+        static const sint decode_data_less_than_needed = -8611;
+        static const sint encode_buff_less_than_needed = -8612;
+        static const sint failed_to_resolve_addr = -8612;
+        static const sint failed_to_connect_peer = -8613;
+        static const sint failed_to_send_req = -8614;
+        static const sint failed_to_send_rsp = -8615;
+        static const sint invalid_msg_received = -8616;
+        static const sint invalid_req_received = -8617;
+        static const sint invalid_rsp_received = -8618;
+        static const sint done = 0;
+        static const sint success = 0;
 };
 
 struct  heron_context{

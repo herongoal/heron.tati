@@ -48,27 +48,12 @@ ulong    heron_engine::create_listen_routine(ulong label, const char *ipaddr, ui
 
 heron_engine::heron_engine(const string &log_file, log_level level, uint slice_kb)
 {
-        if(socketpair(AF_UNIX, SOCK_DGRAM, 0, m_log_fds) < 0)
-        {
-                log_fatal("init.socketpair error,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-        }
-
-                dup2(m_log_fds[0], STDOUT_FILENO);
-                dup2(m_log_fds[0], STDERR_FILENO);
-
-        if(-1 == fcntl(m_log_fds[0], F_SETFL, O_NONBLOCK)
-                        || -1 == fcntl(m_log_fds[1], F_SETFL, O_NONBLOCK))
-        {
-                log_fatal("set nonblock failed,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-        }
+        //        dup2(m_log_fds[0], STDOUT_FILENO);
+        //        dup2(m_log_fds[0], STDERR_FILENO);
 
         const socklen_t buf_len = 4 * 1024 * 1024;
-        setsockopt(m_log_fds[0], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[0], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
+        //setsockopt(m_log_fds[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
+        //setsockopt(m_log_fds[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
 }
 
 void func()
@@ -83,24 +68,6 @@ void func()
 
 int     heron_engine::init()
 {
-        if(socketpair(AF_UNIX, SOCK_DGRAM, 0, m_log_fds) < 0)
-        {
-                log_event("init.socketpair error,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                return  -1;
-        }
-
-        dup2(m_log_fds[0], STDOUT_FILENO);
-        dup2(m_log_fds[0], STDERR_FILENO);
-
-        if(-1 == fcntl(m_log_fds[0], F_SETFL, O_NONBLOCK)
-                        || -1 == fcntl(m_log_fds[1], F_SETFL, O_NONBLOCK))
-        {
-                log_event("set nonblock failed,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                return  -1;
-        }
-
         return  0;
 }
 
@@ -147,7 +114,7 @@ void	heron_engine::stop_threads()
 	 *
 	 */
 	while(true){
-		join_threads
+		//join_threads
 	}
 
 	//stop all new connections
@@ -174,13 +141,18 @@ sint    heron_engine::start_heavy_work_threads()
 		idx>0; ++idx)
         {
                 heron_heavy_work_thread &thread=m_heavy_work_threads[idx];
-                thread.init();
-                int ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
+                sint ret = thread.init();
+		if (ret != 0){
+			return ret;
+		}
+                ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
                 if (ret != 0){
                         log_fatal("failed to create heavy work thread");
+			return ret;
                 }
                 log_event("create heavy work thread finished");
         }
+	return	heron_result_state::success;
 }
 
 sint    heron_engine::start_network_threads()
@@ -189,14 +161,20 @@ sint    heron_engine::start_network_threads()
 		idx>0; ++idx)
         {
                 heron_network_thread &thread=m_network_threads[idx];
-                thread.init();
-                int ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
+                sint ret = thread.init();
+		if (ret != 0){
+			return ret;
+		}
+                ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
                 if (ret != 0){
                         log_fatal("failed to create network thread");
+			return ret;
                 }
                 log_event("create network thread finished");
         }
+	return	heron_result_state::success;
 }
+
 sint    heron_engine::start_threads()
 {
 	//passive
@@ -216,6 +194,7 @@ sint    heron_engine::start_threads()
 		log_fatal("failed to create process thread");
 	}
 	log_event("create process thread finished");
+	return	heron_result_state::success;
 }
 
 void    mask_signals()

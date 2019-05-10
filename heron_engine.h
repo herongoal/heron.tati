@@ -3,6 +3,7 @@
 
 
 #include "heron_define.h"
+#include "heron_channel.h"
 #include "heron_logger.h"
 #include "heron_routine.h"
 #include "heron_network.h"
@@ -56,12 +57,15 @@ private:
 		logs were transfer from threads to main threads via channels as well. so socketpairs were created as well
 		contrl signals were transfer via socketpair.
 	*/
-	static heron_engine     *m_engine_instance;
-	log_level		m_log_level;
-	int	m_log_fds[2];
-	heron_process_thread     m_process_thread;
-	heron_network_thread     m_network_threads[4];
-	heron_heavy_work_thread  m_heavy_work_threads[2];
+	static heron_engine*	m_engine_instance;
+	log_level	        m_log_level;
+
+	heron_synch_channel*	m_synch_channels[32];
+	heron_log_channel*	m_log_channels[32];
+
+	heron_process_thread    m_process_thread;
+	heron_network_thread    m_network_threads[4];
+	heron_heavy_work_thread m_heavy_work_threads[2];
 };
 }}//namespace heron::tati
 

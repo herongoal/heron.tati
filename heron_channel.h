@@ -3,21 +3,22 @@
 
 
 #include "heron_define.h"
+#include "heron_routine.h"
 #include <cstdlib>
 #include <atomic>
 
 
 using namespace std;
 namespace heron{namespace tati{
-class   heron_channel
+class   heron_synch_buffer
 {
 public:
-        static  heron_channel*    create(uint capacity);
+        static  heron_synch_buffer*    create(uint capacity);
 
-        heron_channel&    operator=(const heron_channel &b) = delete;
-        heron_channel(const heron_channel &b) = delete;
+        heron_synch_buffer&    operator=(const heron_synch_buffer &b) = delete;
+        heron_synch_buffer(const heron_synch_buffer &b) = delete;
 
-        ~heron_channel()
+        ~heron_synch_buffer()
         {
                 if(m_buff != nullptr)
                 {
@@ -61,7 +62,7 @@ public:
         }
 
 private:
-        heron_channel(unsigned capacity):m_capacity(capacity),
+        heron_synch_buffer(unsigned capacity):m_capacity(capacity),
                 m_rpos(0), m_wpos(0), m_buff(nullptr)
         {
         }
@@ -69,7 +70,26 @@ private:
         std::atomic<unsigned int>       m_rpos;
         std::atomic<unsigned int>       m_wpos;
         unsigned char*                  m_buff;
-};//end of class   heron_channel
+};//end of class   heron_synch_buffer
+
+class	heron_channel_routine;
+class	heron_synch_channel{
+public:
+	heron_synch_channel();
+	static	heron_synch_channel*	create();
+private:
+	heron_synch_buffer	m_synch_buffs[2];
+	int			m_socketpair[2];
+	heron_channel_routine*	m_routines[2];
+};
+
+class	heron_channel_routine:public heron_routine{
+public:
+	heron_channel_routine(heron_synch_buffer *buff, int fd);
+	static	heron_channel_routine*	create(heron_synch_buffer *buff, int fd);
+protected:
+	heron_synch_buffer*	m_buff;
+};
 }}//namespace heron::tati
 
 

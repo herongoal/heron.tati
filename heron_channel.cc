@@ -1,11 +1,13 @@
 #include "heron_channel.h"
+#include "heron_logger.h"
+#include <fcntl.h>
 #include <string>
 #include <cstring>
 
 
 using namespace std;
 namespace heron{namespace tati{
-heron_channel*  heron_channel::create(uint capacity)
+heron_synch_buffer*  heron_synch_buffer::create(uint capacity)
 {
         /**
          * At least 1 byte should be reserved used to keep the wpos 1 byte
@@ -16,7 +18,7 @@ heron_channel*  heron_channel::create(uint capacity)
          * is continuous and the rpos <= wpos(rpos == wpos stands for empty buffer).
          */
 
-        heron_channel*    pbuff = new (std::nothrow)heron_channel(capacity + 1);
+        heron_synch_buffer*    pbuff = new (std::nothrow)heron_synch_buffer(capacity + 1);
         if(pbuff != nullptr)
         {
                 pbuff->m_buff = (unsigned char *)malloc(pbuff->m_capacity);
@@ -30,7 +32,7 @@ heron_channel*  heron_channel::create(uint capacity)
         return  pbuff;
 }
 
-bool    heron_channel::fetch(void *data, unsigned int len)
+bool    heron_synch_buffer::fetch(void *data, unsigned int len)
 {
         unsigned int    wpos = m_wpos;
         if(wpos < m_rpos)
@@ -70,7 +72,7 @@ bool    heron_channel::fetch(void *data, unsigned int len)
         }
 }
 
-bool    heron_channel::append(const void* data, unsigned len)
+bool    heron_synch_buffer::append(const void* data, unsigned len)
 {
         unsigned int rpos = m_rpos;
         if(m_wpos < rpos)
@@ -106,5 +108,42 @@ bool    heron_channel::append(const void* data, unsigned len)
                 }
                 return  true;
         }
+}
+
+heron_synch_channel*	heron_synch_channel::create()
+{
+	heron_synch_channel* channel = new heron_synch_channel();
+
+	if(socketpair(AF_UNIX, SOCK_DGRAM, 0, channel->m_socketpair) < 0)
+        {
+                log_event("init.socketpair error,errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+		return nullptr;
+        }
+
+        if(-1 == fcntl(channel->m_socketpair[0], F_SETFL, O_NONBLOCK)
+        	|| -1 == fcntl(channel->m_socketpair[1], F_SETFL, O_NONBLOCK))
+        {
+                log_event("set nonblock failed,errno=%d,errmsg=%s",
+                                errno, strerror(errno));
+		return nullptr;
+        }
+
+	for(int n = 0; n < 2; ++n)
+	{
+		heron_synch_buffer *buff = &channel->m_synch_buffs[n];
+		int fd = channel->m_socketpair[n];
+		channel->m_routines[n] = heron_channel_routine::create(buff, fd);
+	}
+	return  channel;
+}
+
+heron_channel_routine::heron_channel_routine(heron_synch_buffer *buff, int fd):heron_routine(0,fd),m_buff(buff)
+{
+}
+
+heron_channel_routine* heron_channel_routine::create(heron_synch_buffer *buff, int fd)
+{
+	return	nullptr;
 }
 }}//namespace heron::tati

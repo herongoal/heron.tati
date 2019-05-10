@@ -192,7 +192,7 @@ sint    heron_network_thread::send_message(ulong dest_routine_id, const void *da
         return        true;
 }
 
-void* heron_network_thread::proxy_loop(void* arg)
+void* heron_network_thread::start(void* arg)
 {
                 sigset_t        sig_set;
                 sigemptyset(&sig_set);

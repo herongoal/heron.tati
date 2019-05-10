@@ -12,13 +12,13 @@ uint    encode(void *buf, uint buf_len, const string &method, void *data, uint d
 
         if(len_required >= buf_len)
         {
-                return  state_encode_req_ceased_longer_buffer_required;
+                return  heron_result_state::encode_buff_less_than_needed;
         }
         memcpy(ptr, &meta, sizeof(meta));
 
         if(len_required + method.length() + data_len + sizeof(rpc_segment_boundary) > buf_len)
         {
-                return  state_encode_req_ceased_longer_buffer_required;
+                return  heron_result_state::encode_buff_less_than_needed;
         }
 
         for(uint n = 0; n < method.size(); ++n)
