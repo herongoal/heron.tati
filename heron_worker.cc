@@ -4,7 +4,7 @@
 
 
 namespace heron{namespace tati{
-void *heron_heavy_work_thread::start(void *arg)
+void *heron_worker_thread::start(void *arg)
 {
 	struct sigaction        sa_interupted;
 

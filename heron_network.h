@@ -36,6 +36,12 @@ class   tcp_listen_routine:public heron_routine{
     public:
             static  tcp_listen_routine*     create(const char *ipaddr, uint16_t port);
             virtual ~tcp_listen_routine();
+
+	    virtual bool    vital() const
+	    {
+		    return false;
+	    }
+
             virtual int     inspect()
             {
                     return  0;

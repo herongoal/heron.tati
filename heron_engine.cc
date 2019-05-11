@@ -46,28 +46,61 @@ ulong    heron_engine::create_listen_routine(ulong label, const char *ipaddr, ui
         return  rtn->m_routine_id;
 }
 
-heron_engine::heron_engine(const string &log_file, log_level level, uint slice_kb)
+heron_engine*   heron_engine::create(const string &log_file, log_level level, uint slice_kb, uint proxy_num, uint worker_num)
 {
-        //        dup2(m_log_fds[0], STDOUT_FILENO);
-        //        dup2(m_log_fds[0], STDERR_FILENO);
+	if(heron_engine::get_instance()!=nullptr){
+		return	nullptr;
+	}
 
-        const socklen_t buf_len = 4 * 1024 * 1024;
-        //setsockopt(m_log_fds[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
-        //setsockopt(m_log_fds[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
-}
+	m_engine_instance = new heron_engine();
+	m_engine_instance->m_proxy_num = proxy_num;
+	m_engine_instance->m_worker_num = worker_num;
 
-void func()
-{
-        //pthread_t thread_id = pthread_self();
-	// check if called by master
-                {
-                //                void    *exit_ret = nullptr;
-                 //               pthread_join(rtp->m_threadid, &exit_ret);
-                }
+	if(proxy_num > sizeof(m_engine_instance->m_network_threads)/sizeof(m_engine_instance->m_network_threads[0])){
+		return	nullptr;
+	}
+	if(worker_num > sizeof(m_engine_instance->m_worker_threads)/sizeof(m_engine_instance->m_worker_threads[0])){
+		return	nullptr;
+	}
+
+	m_engine_instance->m_process_thread = new heron_process_thread();
+        for(int n = proxy_num; n > 0; --n)
+        {
+                m_engine_instance->m_network_threads[n] = new heron_network_thread();
+        }
+
+        for(int n = worker_num; n > 0; --n)
+        {
+                m_engine_instance->m_worker_threads[n-1] = new heron_worker_thread();
+        }
+
+	for(int n = 0; n < proxy_num + worker_num; ++n){
+		m_engine_instance->m_synch_channels[n] = heron_synch_channel::create();
+		m_engine_instance->m_log_channels[n] = heron_log_channel::create();
+	}
+
+	return	m_engine_instance
 }
 
 int     heron_engine::init()
 {
+	//passive
+        //start logger
+        //start listen
+        //start active workers
+        //register channels
+
+        m_process_thread->init();
+        int ret = pthread_create(&m_process_thread->m_thread, nullptr, m_process_thread->start, m_process_thread);
+        if (ret != 0){
+                log_fatal("failed to create process thread");
+        }
+        log_event("create process thread finished");
+        return  heron_result_state::success;
+
+
+	//create threads
+
         return  0;
 }
 
@@ -113,15 +146,6 @@ void	heron_engine::stop_threads()
 	 *
 	 *
 	 */
-	while(true){
-		//join_threads
-	}
-
-	//stop all new connections
-	for(size_t n = 0; n < sizeof(m_network_threads)/sizeof(m_network_threads); ++n)
-	{
-		//stop new connection creation
-	}
 
 	//stop reading from connections
 	//process all the requests
@@ -135,18 +159,18 @@ void	heron_engine::stop_threads()
 	//stop channels
 }
 
-sint    heron_engine::start_heavy_work_threads()
+sint    heron_engine::start_worker_threads()
 {
-	for(size_t idx=sizeof(m_heavy_work_threads)/sizeof(m_heavy_work_threads[0]);
+	for(size_t idx=sizeof(m_worker_threads)/sizeof(m_worker_threads[0]);
 		idx>0; ++idx)
         {
-                heron_heavy_work_thread &thread=m_heavy_work_threads[idx];
-                sint ret = thread.init();
-		if (ret != 0){
+                heron_worker_thread *thread=m_worker_threads[idx];
+                sint ret = thread->init();
+		if (ret != heron_result_state::success){
 			return ret;
 		}
-                ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
-                if (ret != 0){
+                ret = pthread_create(&thread->m_thread, nullptr, thread->start, &thread);
+                if (ret != heron_result_state::success){
                         log_fatal("failed to create heavy work thread");
 			return ret;
                 }
@@ -160,13 +184,13 @@ sint    heron_engine::start_network_threads()
 	for(size_t idx=sizeof(m_network_threads)/sizeof(m_network_threads[0]);
 		idx>0; ++idx)
         {
-                heron_network_thread &thread=m_network_threads[idx];
-                sint ret = thread.init();
-		if (ret != 0){
+                heron_network_thread *thread=m_network_threads[idx];
+                sint ret = thread->init();
+		if (ret != heron_result_state::success){
 			return ret;
 		}
-                ret = pthread_create(&thread.m_thread, nullptr, thread.start, &thread);
-                if (ret != 0){
+                ret = pthread_create(&thread->m_thread, nullptr, thread->start, &thread);
+                if (ret != heron_result_state::success){
                         log_fatal("failed to create network thread");
 			return ret;
                 }
@@ -179,17 +203,14 @@ sint    heron_engine::start_threads()
 {
 	//passive
 	//start logger
-	//start heavy work thread, all the heavy work will be processed here.
-	//start process thread, //all the logic process will be procesed here.
-	//start network thread, //all the network process will be processed here.
+	start_worker_threads();
+	start_process_threads();
+	start_network_threads();
 	//start listen
 	//start active workers
-	//create socketpairs
-	//create channels
-	//register channels
 
-	m_process_thread.init();
-	int ret = pthread_create(&m_process_thread.m_thread, nullptr, m_process_thread.start, &m_process_thread);
+	m_process_thread->init();
+	int ret = pthread_create(&m_process_thread->m_thread, nullptr, m_process_thread->start, &m_process_thread);
 	if (ret != 0){
 		log_fatal("failed to create process thread");
 	}

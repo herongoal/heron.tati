@@ -7,14 +7,14 @@
 
 
 namespace heron{namespace tati{
-class	heron_heavy_work_thread{
+class	heron_worker_thread{
 public:
 	sint init();
 	static void *start(void *arg);
 protected:
 	friend class	heron_engine;
 	pthread_t	m_thread;
-};//end of class heron_heavy_work_thread
+};//end of class heron_worker_thread
 }}//namespace heron::tati
 
 #endif//_HERON_WORKER_H_

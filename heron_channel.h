@@ -87,6 +87,10 @@ class	heron_channel_routine:public heron_routine{
 public:
 	heron_channel_routine(heron_synch_buffer *buff, int fd);
 	static	heron_channel_routine*	create(heron_synch_buffer *buff, int fd);
+	virtual bool    vital() const
+        {
+               return false;
+        }
 protected:
 	heron_synch_buffer*	m_buff;
 };
