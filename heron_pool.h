@@ -10,20 +10,8 @@ using namespace std;
 namespace   heron{namespace tati{
 class   heron_pool{
 public:
-        heron_pool(uint capacity):m_capacity(capacity){
-                m_node_list.m_elem = nullptr;
-                m_node_list.m_id = 0uLL;
-                m_node_list.m_prev = &m_node_list;
-                m_node_list.m_next = &m_node_list;
-
-                m_node_pool.m_elem = nullptr;
-                m_node_pool.m_id = 0uLL;
-                m_node_pool.m_prev = &m_node_pool;
-                m_node_pool.m_next = &m_node_pool;
-        }
-
-	uint    entity_num() const
-	{
+        heron_pool(uint capacity);
+	uint    entity_num() const{
 		return  m_index.size();
 	}
 

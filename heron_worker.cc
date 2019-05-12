@@ -1,4 +1,5 @@
 #include "heron_worker.h"
+#include "heron_engine.h"
 
 #include <signal.h>
 
@@ -6,15 +7,30 @@
 namespace heron{namespace tati{
 void *heron_worker_thread::start(void *arg)
 {
-	struct sigaction        sa_interupted;
+	heron_worker_thread *thread = static_cast<heron_worker_thread *>(arg);
+	if(thread == nullptr){
+		log_event("bad params to start heron_work_thread");
+		return nullptr;
+	}
 
-        sa_interupted.sa_flags = SA_SIGINFO;
-        sigemptyset(&sa_interupted.sa_mask);
-        sa_interupted.sa_sigaction = nullptr;
+	struct sigaction        sa;
+        sa.sa_flags = SA_SIGINFO;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_sigaction = nullptr;
 
-        sigaction(SIGHUP, &sa_interupted, nullptr);
-        sigaction(SIGINT, &sa_interupted, nullptr);
-        sigaction(SIGQUIT, &sa_interupted, nullptr);
-        sigaction(SIGPIPE, &sa_interupted, nullptr);
+        sigaction(SIGHUP, &sa, nullptr);
+        sigaction(SIGINT, &sa, nullptr);
+        sigaction(SIGQUIT, &sa, nullptr);
+        sigaction(SIGPIPE, &sa, nullptr);
+	return	thread->run();
+}
+
+void*   heron_worker_thread::run()
+{       
+        while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
+        }
+        while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
+        }
+	return	nullptr;
 }
 }}

@@ -11,7 +11,10 @@ class	heron_worker_thread{
 public:
 	sint init();
 	static void *start(void *arg);
+
 protected:
+	uint	m_proxy_id;
+	void*	run();
 	friend class	heron_engine;
 	pthread_t	m_thread;
 };//end of class heron_worker_thread

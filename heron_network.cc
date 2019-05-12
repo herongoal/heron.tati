@@ -1,5 +1,6 @@
 #include "heron_define.h"
 #include "heron_logger.h"
+#include "heron_engine.h"
 #include "heron_network.h"
 #include "heron_routine.h"
 #include <sys/epoll.h>
@@ -10,42 +11,38 @@
 
 
 namespace   heron{namespace tati{
-const int       tcp_listen_routine::s_reuse_port = 1;
-tcp_listen_routine      *tcp_listen_routine::create(const char *ipaddr, uint16_t port)
+sint    create_listen_endpoint(const char *ipaddr, ushort port)
 {
         struct sockaddr_in  addr = {AF_INET, htons(port), {0u},
                         {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-        if(0 == inet_aton(ipaddr, &addr.sin_addr))
-        {
+        if(0 == inet_aton(ipaddr, &addr.sin_addr)){
                 log_error( "tcp_listen_routine.inet_aton error,ipaddr=%s",
                                 errno, strerror(errno));
-                return  nullptr;
+		return	-1;
         }
 
         int     fd = socket(AF_INET, SOCK_STREAM, 0);
-        if(fd < 0)
-        {
+        if(fd < 0){
                 log_error( "tcp_listen_routine.socket errno=%d,errmsg=%s",
                                 errno, strerror(errno));
-                return  nullptr;
+		return	-1;
         }
 
-        if(-1 == fcntl(fd, F_SETFL, O_NONBLOCK))
-        {
+        if(-1 == fcntl(fd, F_SETFL, O_NONBLOCK)){
                 log_error( "tcp_listen_routine.fcntl errno=%d,errmsg=%s",
                                 errno, strerror(errno));
                 ::close(fd);
-                return  nullptr;
+		return	-1;
         }
 
-        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &s_reuse_port, sizeof(s_reuse_port));
-        if(0 != bind(fd, (struct sockaddr *)&addr, sizeof(addr)))
-        {
+	const sint reuse_port = 1;
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse_port, sizeof(reuse_port));
+        if(0 != bind(fd, (struct sockaddr *)&addr, sizeof(addr))){
                 log_error( "tcp_listen_routine.bind errno=%d,errmsg=%s",
                                 errno, strerror(errno));
                 ::close(fd);
-                return  nullptr;
+		return	-1;
         }
 
         if(0 != listen(fd, 2000))
@@ -53,8 +50,13 @@ tcp_listen_routine      *tcp_listen_routine::create(const char *ipaddr, uint16_t
                 log_error( "tcp_listen_routine.listen errno=%d,errmsg=%s",
                                 errno, strerror(errno));
                 ::close(fd);
-                return  nullptr;
+		return	-1;
         }
+	return	fd;
+}
+
+tcp_listen_routine* tcp_listen_routine::create(sint fd)
+{
         tcp_listen_routine *sr = new tcp_listen_routine(0, fd);
         if(nullptr == sr) 
         {   
@@ -67,11 +69,6 @@ tcp_listen_routine      *tcp_listen_routine::create(const char *ipaddr, uint16_t
 tcp_listen_routine::~tcp_listen_routine()
 {
         log_event( "~tcp_listen_routine");
-}
-
-uint    tcp_listen_routine::get_events()
-{
-        return  EPOLLIN;
 }
 
 void    heron_network_thread::react()
@@ -220,7 +217,7 @@ void        heron_network_thread::inspect()
 
                 if(rt->m_last_inspect_time + 20 < monotonic_ms)
                 {
-                        if(rt->m_del_flag || rt->inspect() < 0)
+                        if(rt->m_close_mark || rt->inspect() < 0)
                         {
                                 m_routine_pool.remove_element(rt->m_routine_id);
                                 delete        rt;
@@ -265,13 +262,40 @@ sint    heron_network_thread::close_routine(ulong routine_id)
 	return 0;
 }
 
+void    heron_process_thread::half_exit()
+{
+        for(uint n = 0; n < m_pool.entity_num(); ++n){
+                heron_routine *rtn = static_cast<heron_routine *>(m_pool.current_element());
+                if (rtn->get_type() == 0){
+                        //network_thread closing mode(no listen)
+                        //networker 退出条件
+                }
+                else if(rtn->get_type() == 2){
+                        //unregister readable events
+                        //process all left messages
+                }
+                else if(3 == 0){
+                        //process thread broadcast closing events for each routine
+                }
+                else{
+                        //所有的响应都发出去了,所有的查询都返回了
+                }
+        }
+
+        //for passive sessions
+        //process all left messages(已经读到就处理，已经决定发送就发送完)
+        //什么时候推出？没有数据要发送
+
+        //do not accept new channels
+}
+
 sint   heron_network_thread::add_routine(heron_routine *rt)
 {
         m_routine_pool.insert_element(rt->m_routine_id, rt);
 
-        if(rt->get_events() != 0)
+        if(rt->get_changed_events() != 0)
         {
-                const int events = rt->get_events();
+                const int events = rt->get_changed_events();
                 struct  epoll_event ev;
                 ev.events = events;
                 ev.data.u64 = rt->m_routine_id;
@@ -295,6 +319,15 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
         if(rt->m_proxy_id == m_proxy_id && rt->m_recv.data_len() > 0)
         {
         }
+	return	heron_result_state::success;
+}
+
+void    heron_network_thread::run()
+{
+        while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
+        }
+        while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
+        }
 }
 
 void    heron_network_thread::process_events(ulong routine_id, const unsigned events)
@@ -314,7 +347,7 @@ void    heron_network_thread::process_events(ulong routine_id, const unsigned ev
                 {
                         //delete writable event
                         struct  epoll_event ev;
-                        ev.events = rt->get_events() & (~EPOLLOUT);
+                        ev.events = rt->get_managed_events() & (~EPOLLOUT);
                         ev.data.u64 = rt->m_routine_id;
                         if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
                         {
@@ -323,7 +356,6 @@ void    heron_network_thread::process_events(ulong routine_id, const unsigned ev
                         }
                 }
         }
-        bool need_close = false;
         if(events & EPOLLIN)
         {
         }

@@ -225,6 +225,13 @@ sint    heron_tcp_routine::do_connect(ulong label, const char *ipaddr, ushort po
         return 0;
 }
 
+uint    heron_tcp_routine::get_changed_events()
+{
+	if(heron_engine::get_instance()->get_state() == heron_engine::state_starting){
+		return  tcp_events & ~m_managed_events;
+	} else {
+	}
+}
 
 int     heron_tcp_routine::on_readable()
 {

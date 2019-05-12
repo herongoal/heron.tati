@@ -7,6 +7,7 @@
 
 
 #include <netinet/in.h>
+#include <sys/epoll.h>
 
 
 namespace heron{namespace tati{
@@ -23,26 +24,27 @@ public:
         heron_routine(ulong label, sint fd);
         virtual         ~heron_routine();
 
-        virtual     int     on_event(heron_event ev);
+        virtual	sint    on_event(heron_event ev);
         sint append_send_data(const void*, uint);
 
         virtual bool    vital() const
         {
                return false;
         }
-        virtual sint    inspect()
-	{
+        virtual sint    inspect(){
+		return 0;
+	}
+
+        virtual sint    get_type(){
 		return 0;
 	}
 
 	void	add_routine(heron_routine *rt);
 
-	bool	m_close_mark;
-        /**
-         * Used to return epoll events for epoll registering.
-         */
-        virtual        uint        get_events() = 0;
-
+        uint    get_managed_events() const{
+		return  m_managed_events;
+	} 
+        virtual uint    get_changed_events() = 0;
 
 protected:
         int             do_nonblock_write(const void *buf, unsigned len, unsigned &bytes_sent);
@@ -59,10 +61,11 @@ protected:
         void               close_fd();
 
 public:
+	uint	m_managed_events;
+	bool	m_close_mark;
         heron_buffer    m_send;
         heron_buffer    m_recv;
         ulong           m_routine_id;
-	bool		m_del_flag;
         ulong           m_timeout;
         uint            m_proxy_id;
         heron_routine_attr            m_attr;
@@ -86,11 +89,12 @@ public:
         sint do_connect(ulong, const char *ipaddr, uint16_t port);
 	sint check_conn_state(int err);
 	virtual bool       append_send_data(const void *data, unsigned len);
-        uint get_events();
+	uint    get_changed_events();
 	sint on_writable();
 	sint on_readable();
 	sint on_error();
 private:
+	static const uint tcp_events = EPOLLIN | EPOLLOUT;
 };
 }}//namespace heron::tati
 

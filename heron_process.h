@@ -3,6 +3,7 @@
 
 
 #include "heron_define.h"
+#include "heron_pool.h"
 #include <pthread.h>
 
 
@@ -20,7 +21,10 @@ public:
 	sint	init();
 	sint	react();
 	static void  *start(void *arg);
+	void    run();
 protected:
+	void	half_exit();
+	heron_pool	m_pool;
 	friend  class   heron_engine;
 	pthread_t    m_thread;
 };
