@@ -26,6 +26,7 @@ public:
         {
                return true;
         }
+	virtual sint    append_send_data(const void *data, unsigned len);
 protected:
         heron_synch_buffer*     m_buff;
 };
@@ -37,10 +38,11 @@ public:
 	virtual bool    vital() const{
                return true;
         }
-	sint	log_event(const char *fmt, ...);
-	sint	log_alert(const char *fmt, ...);
-	sint	log_vital(const char *fmt, ...);
-	sint	log_fatal(const char *fmt, ...);
+	virtual sint    append_send_data(const void *data, unsigned len);
+	sint	log_event(const char *fmt, ...){}
+	sint	log_alert(const char *fmt, ...){}
+	sint	log_vital(const char *fmt, ...){}
+	sint	log_fatal(const char *fmt, ...){}
 protected:
         heron_synch_buffer*     m_buff;
 };

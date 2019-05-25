@@ -43,7 +43,7 @@ inline  ulong   gen_id(uchar scope, ulong seq){
 }
 
 struct  heron_routine_attr{
-    heron_routine_attr(ulong label, ulong ts):m_label(label),m_create_time(ts){}
+    heron_routine_attr():m_label(),m_create_time(0){}
     heron_routine_attr& operator=(const heron_routine_attr &attr) = default;
     heron_routine_attr(const heron_routine_attr &attr) = default;
 

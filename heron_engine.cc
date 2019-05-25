@@ -40,9 +40,9 @@ heron_engine*	heron_engine::m_instance = nullptr;
 ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uint16_t port)
 {
 	int fd = 0;
-        tcp_listen_routine *rtn = tcp_listen_routine::create(fd);
+        tcp_listen_routine *rtn = tcp_listen_routine::create(this, fd);
 
-        rtn->add_routine(rtn);
+        //rtn->add_routine(rtn);
         log_vital( "create_service_routine,origin=%d,routine_id=%lu,"
                         "ipaddr=%s,port=%u",
                         rtn->m_routine_id, ipaddr, port);
@@ -112,7 +112,7 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
 			m_instance = nullptr;
 			return	nullptr;
 		}
-		m_instance->m_log_channels[n] = heron_log_channel::create();
+		m_instance->m_log_channels[n] = heron_log_channel::create(m_instance, n+1);
 		if (nullptr == m_instance->m_synch_channels[n]){
 			m_instance->log_fatal("");
 			delete	m_instance;
@@ -265,10 +265,6 @@ sint    heron_engine::run()
 		//check if state has channged
 	}
 	return	heron_result_state::success;
-}
-
-heron_engine::heron_engine(){
-	m_instance = this;
 }
 
 sint    heron_engine::start_threads()

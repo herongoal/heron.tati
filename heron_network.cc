@@ -39,7 +39,7 @@ void    heron_network_thread::react()
         struct  epoll_event     arr_events[512];
         uint    fetch_num = sizeof(arr_events) / sizeof(arr_events[0]);
 
-        if(m_routine_pool.entity_num() < fetch_num) fetch_num = m_routine_pool.entity_num();
+        if(m_pool.entity_num() < fetch_num) fetch_num = m_pool.entity_num();
         if(fetch_num > 0)
         {
                 int result = epoll_wait(m_epoll_fd, arr_events, fetch_num, 0);
@@ -93,7 +93,7 @@ void    tcp_listen_routine::on_error()
 
 sint    heron_network_thread::send_message(ulong dest_routine_id, const void *data, uint len)
 {
-        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(dest_routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(dest_routine_id);
 
         if(nullptr == rt)
         {
@@ -133,15 +133,15 @@ void        heron_network_thread::inspect()
 {
         ulong monotonic_ms = gen_monotonic_ms();
 
-        for(uint n = 0; n < m_routine_pool.entity_num(); ++n)
+        for(uint n = 0; n < m_pool.entity_num(); ++n)
         {
-                heron_routine *rt = (heron_routine *)m_routine_pool.current_element();
+                heron_routine *rt = (heron_routine *)m_pool.current_element();
 
                 if(rt->m_last_inspect_time + 20 < monotonic_ms)
                 {
                         if(rt->m_close_mark || rt->inspect() < 0)
                         {
-                                m_routine_pool.remove_element(rt->m_routine_id);
+                                m_pool.remove_element(rt->m_routine_id);
                                 delete        rt;
                         }
                         else
@@ -153,13 +153,13 @@ void        heron_network_thread::inspect()
                 {
                         break;
                 }
-                m_routine_pool.forward_element();
+                m_pool.forward_element();
         }
 }
 
 void    heron_network_thread::set_routine_timeout(ulong routine_id, int timeout_ms)
 {
-        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
         if(nullptr != rt)
         {
                 rt->m_timeout = timeout_ms;
@@ -168,12 +168,12 @@ void    heron_network_thread::set_routine_timeout(ulong routine_id, int timeout_
 
 sint    heron_network_thread::close_routine(ulong routine_id)
 {
-        heron_routine *rt = (heron_routine *)m_routine_pool.remove_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.remove_element(routine_id);
 
         if(nullptr != rt)
         {
                 m_log_writer->log_event("close_routine routine_id=%lu", routine_id);
-                unregister_events(m_epoll_fd, rt);
+                //unregister_events(m_epoll_fd, rt);
                 delete  rt;
         }
         else
@@ -184,7 +184,7 @@ sint    heron_network_thread::close_routine(ulong routine_id)
 	return 0;
 }
 
-void    heron_process_thread::half_exit()
+void    heron_network_thread::half_exit()
 {
         for(uint n = 0; n < m_pool.entity_num(); ++n){
                 heron_routine *rtn = static_cast<heron_routine *>(m_pool.current_element());
@@ -213,7 +213,7 @@ void    heron_process_thread::half_exit()
 
 sint   heron_network_thread::add_routine(heron_routine *rt)
 {
-        m_routine_pool.insert_element(rt->m_routine_id, rt);
+        m_pool.insert_element(rt->m_routine_id, rt);
 
         if(rt->get_changed_events() != 0)
         {
@@ -238,7 +238,7 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
                 m_log_writer->log_event("add_routine no_events");
         }
 
-        if(rt->m_proxy_id == m_proxy_id && rt->m_recv.data_len() > 0)
+        if(rt->m_proxy_id == m_proxy_id && rt->m_recv->data_len() > 0)
         {
         }
 	return	heron_result_state::success;
@@ -254,7 +254,7 @@ void    heron_network_thread::run()
 
 void    heron_network_thread::process_events(ulong routine_id, const unsigned events)
 {
-        heron_routine *rt = (heron_routine *)m_routine_pool.search_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
         if(nullptr == rt)
         {
                 m_log_writer->log_event("process_events,routine_id=%lu,events=%u",

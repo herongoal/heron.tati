@@ -77,20 +77,20 @@ class	heron_engine;
 
 class	heron_synch_channel{
 public:
-	heron_synch_channel();
+	heron_synch_channel(){}
 	static	heron_synch_channel*	create(heron_engine *engine, uint channel_id);
 private:
-	heron_synch_buffer	m_synch_buffs[2];
+	heron_synch_buffer*	m_synch_buffs[2];
 	int			m_socketpair[2];
 	heron_channel_routine*	m_routines[2];
 };
 
 class   heron_log_channel{
 public:
-        heron_log_channel();
-        static  heron_log_channel*    create();
+        heron_log_channel(){}
+	static	heron_log_channel*    create(heron_engine *engine, uint logger_id);
 private:
-        heron_synch_buffer      m_synch_buff;
+        heron_synch_buffer*     m_synch_buff;
         sint                    m_socketpair[2];
         heron_channel_routine*  m_routines[2];
 };
@@ -99,6 +99,14 @@ class	heron_channel_routine:public heron_routine{
 public:
 	heron_channel_routine(heron_synch_buffer *buff, int fd);
 	static	heron_channel_routine*	create(heron_synch_buffer *buff, int fd);
+
+	
+        virtual sint    on_event(heron_event ev){
+	}
+
+        virtual sint    append_send_data(const void*, uint){
+	}
+
 	virtual bool    vital() const
         {
                return false;

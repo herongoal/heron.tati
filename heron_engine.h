@@ -21,7 +21,7 @@ class	heron_log_channel;
 class   heron_engine{
 public:
         static heron_engine* create(const string &log_file, log_level level, uint slice_kb, uint proxy_num, uint worker_num);
-        virtual ~heron_engine();
+        virtual ~heron_engine(){}
 
 	sint    init();
 
@@ -48,8 +48,8 @@ public:
 	sint    start_process_thread();
 	sint    start_network_threads();
 	sint    start_threads();
-	sint    start_service();
-	sint    stop_service();
+	sint    start_service(){}
+	sint    stop_service(){}
 	void    stop_process();
 	void    stop_threads();
 	void    clear_resource();
@@ -69,6 +69,7 @@ public:
 	}
 private:
 	friend  class   heron_synch_channel;
+	friend  class   heron_log_channel;
 	friend  class   tcp_listen_routine;
 	struct	listen_endpoint{
 		sint	fd;
@@ -77,7 +78,7 @@ private:
 
 	vector<listen_endpoint>	m_endpoints;
 	uchar   m_state;
-	heron_engine();
+	heron_engine(){}
 
 	void log_alert(const char *fmt, ...){
 	}

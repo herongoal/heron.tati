@@ -29,6 +29,24 @@ sint    heron_process_thread::react()
 	return	heron_result_state::success;
 }
 
+void* heron_process_thread::start(void* arg)
+{
+                sigset_t        sig_set;
+                sigemptyset(&sig_set);
+                sigaddset(&sig_set, SIGTERM);
+                sigaddset(&sig_set, SIGQUIT);
+                sigaddset(&sig_set, SIGINT);
+                sigaddset(&sig_set, SIGHUP);
+                sigaddset(&sig_set, SIGPIPE);
+                sigaddset(&sig_set, SIGUSR1);
+                sigaddset(&sig_set, SIGUSR2);
+                sigaddset(&sig_set, SIGXFSZ);
+                sigaddset(&sig_set, SIGTRAP);
+                pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
+
+        return  (void *)0;
+}
+
 sint    heron_process_thread::process_timers()
 {       
 	return	heron_result_state::success;

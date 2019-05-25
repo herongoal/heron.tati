@@ -21,11 +21,11 @@ void    unregister_events(sint epoll_fd, heron_routine *rt);
 
 class        heron_routine{
 public:
-        heron_routine(ulong label, sint fd);
-        virtual         ~heron_routine();
+        heron_routine(ulong label, sint fd){}
+        virtual         ~heron_routine(){}
 
         virtual	sint    on_event(heron_event ev) = 0;
-        sint append_send_data(const void*, uint);
+        virtual sint	append_send_data(const void*, uint) = 0;
 
         virtual bool    vital() const {
                return false;
@@ -58,13 +58,14 @@ protected:
          */
         int                do_nonblock_recv(heron_buffer &hb);
 
-        void               close_fd();
+        void               close_fd(){
+	}
 
 public:
 	uint	m_managed_events;
 	bool	m_close_mark;
-        heron_buffer    m_send;
-        heron_buffer    m_recv;
+        heron_buffer    *m_send;
+        heron_buffer    *m_recv;
         ulong           m_routine_id;
         ulong           m_timeout;
         uint            m_proxy_id;
@@ -88,7 +89,7 @@ public:
         sint on_event(heron_event ev);
         sint do_connect(ulong, const char *ipaddr, uint16_t port);
 	sint check_conn_state(int err);
-	virtual bool       append_send_data(const void *data, unsigned len);
+	virtual sint    append_send_data(const void *data, unsigned len);
 	uint    get_changed_events();
 	sint on_writable();
 	sint on_readable();

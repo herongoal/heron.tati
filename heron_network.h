@@ -16,10 +16,10 @@ class	heron_routine;
 class	heron_engine;
 class   heron_network_thread{
 public:
-        heron_network_thread();
+        heron_network_thread():m_pool(32*1024){}
 	void	process_events(ulong routine_id, uint events);
 	void	set_routine_timeout(ulong routine_id, int timeout_ms);
-	void	process_timers();
+	void	process_timers(){}
 	slong   gen_monotonic_ms();
 	void	inspect();
 	sint	send_message(ulong dest_routine_id, const void *data, unsigned len);
@@ -31,7 +31,6 @@ public:
         void    react();
 	sint	init();
 	static void*	start(void* arg);
-	heron_pool	m_routine_pool;
 	int	m_epoll_fd;
 	uint	m_proxy_id;
 	int	m_log_fds[2];
@@ -40,6 +39,7 @@ protected:
 	void	half_exit();
 	sint	m_managed_events;
 	void	run();
+	heron_pool      m_pool;
 	friend  class   heron_engine;
 	pthread_t	m_thread;
 };
@@ -52,9 +52,15 @@ public:
 		return	true;
 	}
 
-	sint    on_event(heron_event ev);
+	sint    append_send_data(const void *data, unsigned len){
+		return  0;
+	}
+	sint    on_event(heron_event ev){
+	}
 
-	uint	get_changed_events();
+	uint	get_changed_events(){
+		return  0;
+	}
 
 	virtual int     inspect(){
 		return  0;
@@ -63,7 +69,7 @@ public:
 	void                on_error();
 
 private:
-	tcp_listen_routine(uint label, int fd);
+	tcp_listen_routine(uint label, int fd):heron_routine(label,fd){}
 	heron_log_writer*	m_log_writer;
 	static const int        s_reuse_port;
 };
