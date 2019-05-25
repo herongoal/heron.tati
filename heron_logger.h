@@ -31,7 +31,7 @@ public:
         static  heron_log_reader*  create(heron_synch_buffer *buff, int fd);
 	virtual bool    vital() const
         {
-               return false;
+               return true;
         }
 protected:
         heron_synch_buffer*     m_buff;
@@ -43,7 +43,7 @@ public:
         static  heron_log_writer*  create(heron_synch_buffer *buff, int fd);
 	virtual bool    vital() const
         {
-               return false;
+               return true;
         }
 protected:
         heron_synch_buffer*     m_buff;

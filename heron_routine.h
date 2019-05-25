@@ -24,13 +24,13 @@ public:
         heron_routine(ulong label, sint fd);
         virtual         ~heron_routine();
 
-        virtual	sint    on_event(heron_event ev);
+        virtual	sint    on_event(heron_event ev) = 0;
         sint append_send_data(const void*, uint);
 
-        virtual bool    vital() const
-        {
+        virtual bool    vital() const {
                return false;
         }
+
         virtual sint    inspect(){
 		return 0;
 	}

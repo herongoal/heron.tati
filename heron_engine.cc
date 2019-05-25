@@ -34,9 +34,11 @@ void    signal_handle(int sigid, siginfo_t *si, void *unused)
         }
 }
 
+heron_engine*	heron_engine::m_instance = nullptr;
 ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uint16_t port)
 {
-        tcp_listen_routine *rtn = tcp_listen_routine::create(ipaddr,port);
+	int fd = 0;
+        tcp_listen_routine *rtn = tcp_listen_routine::create(fd);
 
         rtn->add_routine(rtn);
         log_event( "create_service_routine,origin=%d,routine_id=%lu,"
@@ -222,7 +224,7 @@ sint    heron_engine::run()
 		//check states
 		//check if state has channged
 	}
-
+	return	heron_result_state::success;
 }
 
 sint    heron_engine::start_threads()

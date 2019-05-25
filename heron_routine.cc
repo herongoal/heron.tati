@@ -1,5 +1,6 @@
 #include "heron_routine.h"
 #include "heron_define.h"
+#include "heron_engine.h"
 #include "heron_logger.h"
 
 
@@ -69,15 +70,17 @@ int heron_tcp_routine::on_event(heron_event ev)
 }
 
 
-uint        heron_tcp_routine::get_events()
+uint        heron_tcp_routine::get_changed_events()
 {
-                uint        events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
+	uint        events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
+	if(heron_engine::get_instance()->get_state() == heron_engine::state_starting){
+		if(!m_writable || m_send.data_len() > 0){
+			return  (tcp_events & ~m_managed_events) | EPOLLOUT;
+		}
+        } else {
+        }
 
-                if(!m_writable || m_send.data_len() > 0)
-                {
-                        events |= EPOLLOUT;
-                }
-                return  events;
+        return  events;
 }
 
 
@@ -223,14 +226,6 @@ sint    heron_tcp_routine::do_connect(ulong label, const char *ipaddr, ushort po
         log_trace( "active_session_routine.create,m_writable=%d",
                         (int)m_writable);
         return 0;
-}
-
-uint    heron_tcp_routine::get_changed_events()
-{
-	if(heron_engine::get_instance()->get_state() == heron_engine::state_starting){
-		return  tcp_events & ~m_managed_events;
-	} else {
-	}
 }
 
 int     heron_tcp_routine::on_readable()
@@ -394,7 +389,7 @@ void    modify_events(sint epoll_fd, heron_routine *rt)
 {
         struct  epoll_event ev;
         ev.data.u64 = rt->m_routine_id;
-        ev.events = rt->get_events();
+        ev.events = rt->get_changed_events();
 
         if(ev.events != 0 && rt->m_fd >= 0)
         {
@@ -410,7 +405,7 @@ void    unregister_events(sint epoll_fd, heron_routine *rt)
 {
         struct  epoll_event ev;
 
-        if((ev.events = rt->get_events()) != 0 && rt->m_fd >= 0)
+        if((ev.events = rt->get_changed_events()) != 0 && rt->m_fd >= 0)
         {
                 int ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, rt->m_fd, &ev);
                 if(0 == ret)

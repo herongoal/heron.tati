@@ -37,7 +37,7 @@ slong   gen_monotonic_ms();
 
 const   char hex_digits[] = "0123456789abcdef";
 
-ulong   gen_id(uchar scope, ulong seq){
+inline  ulong   gen_id(uchar scope, ulong seq){
         char str[32] = { 0 };
         uint len = 1;
         str[sizeof(str) - len] = 0;

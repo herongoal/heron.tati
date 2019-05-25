@@ -49,6 +49,8 @@ public:
 		return	true;
 	}
 
+	sint    on_event(heron_event ev);
+
 	uint	get_changed_events();
 
 	virtual int     inspect(){
