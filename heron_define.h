@@ -11,27 +11,12 @@ using namespace std;
 namespace heron{namespace tati{
 typedef uint64_t    ulong;
 typedef	int64_t     slong;
-
 typedef	uint32_t    uint;
 typedef	int32_t     sint;
-
 typedef	uint16_t    ushort;
 typedef	int16_t     sshort;
-
 typedef	uint8_t     uchar;
 typedef	int8_t      schar;
-
-
-enum    log_level{
-        log_level_trace = 1,
-        log_level_debug = 2,
-        log_level_event = 2,
-        log_level_alert = 3,
-        log_level_error = 4,
-        log_level_vital = 5,
-        log_level_fatal = 6,
-};
-
 
 slong   gen_monotonic_ms();
 
@@ -81,12 +66,6 @@ enum    heron_event{
         heron_socket_error = 1 << 4,
 };
 
-
-const ulong   distinct_constant_tantalum = 0x74616e74616c756d;
-const ulong   distinct_constant_titanium = 0x746974616e69756d;
-const uchar   distinct_constant_version = 0x31;
-
-
 enum	enm_directive{
 	directive_proc_msg = 10,
 	directive_send_msg = 11,
@@ -109,36 +88,6 @@ struct  heron_result_state{
 struct  heron_context{
         heron_routine_attr      attr;
         heron_routine_stat      stat;
-};
-
-struct  heron_segment_meta{
-	heron_segment_meta(uint req_seq, uint rsp_seq):prefix_tantalum(distinct_constant_tantalum),
-		req_sequence(req_seq), rsp_sequence(rsp_seq)
-        {
-        }
-        ulong   prefix_tantalum;
-        uint    req_sequence;
-        uint    rsp_sequence;
-
-        struct{
-                uchar   version;
-                uchar   type;
-                uchar   flag;
-                uchar   ordinal;
-        }segment;
-
-	uchar   routine_length;
-	ushort  payload_length;
-};
-
-struct  rpc_segment_boundary{
-        ulong    hybrid_checksum;
-        ulong    suffix_titanium;
-};
-
-struct tati_session_t{
-        uint    last_self_sequence;
-        uint    last_peer_sequence;
 };
 }}//namespace heron::tati
 

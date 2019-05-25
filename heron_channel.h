@@ -76,11 +76,21 @@ class	heron_channel_routine;
 class	heron_synch_channel{
 public:
 	heron_synch_channel();
-	static	heron_synch_channel*	create();
+	static	heron_synch_channel*	create(uint channel_id);
 private:
 	heron_synch_buffer	m_synch_buffs[2];
 	int			m_socketpair[2];
 	heron_channel_routine*	m_routines[2];
+};
+
+class   heron_log_channel{
+public:
+        heron_log_channel();
+        static  heron_log_channel*    create();
+private:
+        heron_synch_buffer      m_synch_buff;
+        sint                    m_socketpair[2];
+        heron_channel_routine*  m_routines[2];
 };
 
 class	heron_channel_routine:public heron_routine{

@@ -41,7 +41,7 @@ ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uin
         tcp_listen_routine *rtn = tcp_listen_routine::create(fd);
 
         rtn->add_routine(rtn);
-        log_event( "create_service_routine,origin=%d,routine_id=%lu,"
+        log_vital( "create_service_routine,origin=%d,routine_id=%lu,"
                         "ipaddr=%s,port=%u",
                         rtn->m_routine_id, ipaddr, port);
 
@@ -51,34 +51,72 @@ ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uin
 heron_engine*   heron_engine::create(const string &log_file, log_level level, uint slice_kb, uint proxy_num, uint worker_num)
 {
 	if(heron_engine::get_instance()!=nullptr){
+		log_fatal("one only");
+		return	nullptr;
+	}
+
+	if(proxy_num > sizeof(m_instance->m_network_threads)/sizeof(m_instance->m_network_threads[0])){
+		log_fatal("proxy num");
+		return	nullptr;
+	}
+
+	if(worker_num > sizeof(m_instance->m_worker_threads)/sizeof(m_instance->m_worker_threads[0])){
+		log_fatal("proxy num");
 		return	nullptr;
 	}
 
 	m_instance = new heron_engine();
-	m_instance->m_proxy_num = proxy_num;
 	m_instance->m_worker_num = worker_num;
+	m_instance->m_proxy_num = proxy_num;
 
-	if(proxy_num > sizeof(m_instance->m_network_threads)/sizeof(m_instance->m_network_threads[0])){
-		return	nullptr;
-	}
-	if(worker_num > sizeof(m_instance->m_worker_threads)/sizeof(m_instance->m_worker_threads[0])){
-		return	nullptr;
-	}
+	bzero(m_instance->m_network_threads, sizeof(m_instance->m_network_threads));
+	bzero(m_instance->m_worker_threads, sizeof(m_instance->m_worker_threads));
+	bzero(m_instance->m_synch_channels, sizeof(m_instance->m_synch_channels));
+	bzero(m_instance->m_log_channels, sizeof(m_instance->m_log_channels));
 
 	m_instance->m_process_thread = new heron_process_thread();
-        for(uint n = proxy_num; n > 0; --n)
-        {
+	if (nullptr == m_instance->m_process_thread){
+		log_fatal("failed to create worker thread");
+		delete	m_instance;
+		m_instance = nullptr;
+		return	nullptr;
+	}
+
+        for(uint n = 0; n < m_instance->m_proxy_num; ++n){
                 m_instance->m_network_threads[n] = new heron_network_thread();
+		if (nullptr == m_instance->m_synch_channels[n]){
+			log_fatal("failed to create worker thread");
+			delete	m_instance;
+			m_instance = nullptr;
+			return	nullptr;
+		}
         }
 
-        for(uint n = worker_num; n > 0; --n)
-        {
-                m_instance->m_worker_threads[n-1] = new heron_worker_thread();
+        for(uint n = 0; n < m_instance->m_worker_num; ++n){
+                m_instance->m_worker_threads[n] = new heron_worker_thread();
+		if (nullptr == m_instance->m_synch_channels[n]){
+			log_fatal("");
+			delete	m_instance;
+			m_instance = nullptr;
+			return	nullptr;
+		}
         }
 
-	for(uint n = 0; n < proxy_num + worker_num; ++n){
-		m_instance->m_synch_channels[n] = heron_synch_channel::create();
+	for(uint n = 0; n < m_instance->m_proxy_num + m_instance->m_worker_num; ++n){
+		m_instance->m_synch_channels[n] = heron_synch_channel::create(n+1);
+		if (nullptr == m_instance->m_synch_channels[n]){
+			log_fatal("");
+			delete	m_instance;
+			m_instance = nullptr;
+			return	nullptr;
+		}
 		m_instance->m_log_channels[n] = heron_log_channel::create();
+		if (nullptr == m_instance->m_synch_channels[n]){
+			log_fatal("");
+			delete	m_instance;
+			m_instance = nullptr;
+			return	nullptr;
+		}
 	}
 
 	return	m_instance;
@@ -97,7 +135,7 @@ int     heron_engine::init()
         if (ret != heron_result_state::success){
                 log_fatal("failed to create process thread");
         }
-        log_event("create process thread finished");
+        log_vital("create process thread finished");
         return  heron_result_state::success;
 }
 
@@ -179,7 +217,7 @@ sint    heron_engine::start_worker_threads()
 			log_fatal("create worker-thread=%d failed", thread->m_proxy_id);
 			return ret;
                 }
-                log_event("create worker-thread=%d finished", thread->m_proxy_id);
+                log_vital("create worker-thread=%d finished", thread->m_proxy_id);
         }
 	return	heron_result_state::success;
 }
@@ -195,7 +233,7 @@ sint    heron_engine::start_process_thread()
 		log_fatal("failed to create process thread");
 		return ret;
 	}
-	log_event("create process thread finished");
+	log_vital("create process thread finished");
 	return  heron_result_state::success;
 }
 
@@ -208,7 +246,7 @@ sint    heron_engine::start_network_threads()
                         log_fatal("failed to create network thread");
 			return ret;
                 }
-                log_event("create network thread finished");
+                log_vital("create network thread finished");
         }
 	return	heron_result_state::success;
 }
@@ -227,6 +265,10 @@ sint    heron_engine::run()
 	return	heron_result_state::success;
 }
 
+heron_engine::heron_engine(){
+	m_instance = this;
+}
+
 sint    heron_engine::start_threads()
 {
 	//passive
@@ -242,7 +284,7 @@ sint    heron_engine::start_threads()
 	if (ret != 0){
 		log_fatal("failed to create process thread");
 	}
-	log_event("create process thread finished");
+	log_vital("create process thread finished");
 	return	heron_result_state::success;
 }
 

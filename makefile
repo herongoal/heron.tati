@@ -1,5 +1,5 @@
 TARGET=libheron_engine.a
-OBJS = heron_buffer.o heron_channel.o heron_pool.o heron_define.o heron_timer.o \
+OBJS = heron_buffer.o heron_channel.o heron_pool.o heron_protocol.o heron_define.o heron_timer.o \
        heron_logger.o heron_process.o heron_worker.o heron_engine.o \
        heron_network.o \
 

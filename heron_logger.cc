@@ -11,7 +11,7 @@
 
 using namespace std;
 namespace heron{namespace tati{
-void    fatal_log(const char *format, ...)
+void    log_fatal(const char *format, ...)
 {
                         //append_log_prefix(log_fatal);
 

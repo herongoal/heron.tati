@@ -9,7 +9,7 @@ void *heron_worker_thread::start(void *arg)
 {
 	heron_worker_thread *thread = static_cast<heron_worker_thread *>(arg);
 	if(thread == nullptr){
-		log_event("bad params to start heron_work_thread");
+		log_fatal("bad params to start heron_work_thread");
 		return nullptr;
 	}
 

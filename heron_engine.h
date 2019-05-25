@@ -86,8 +86,8 @@ private:
 	uint	m_proxy_num;
 	uint	m_worker_num;
 
-	heron_synch_channel*	m_synch_channels[32];
-	heron_log_channel*	m_log_channels[32];
+	heron_synch_channel*	 m_synch_channels[32];
+	heron_log_channel*	 m_log_channels[32];
 
 	heron_process_thread*	 m_process_thread;
 	heron_network_thread*    m_network_threads[4];

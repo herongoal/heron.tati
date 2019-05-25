@@ -110,31 +110,46 @@ bool    heron_synch_buffer::append(const void* data, unsigned len)
         }
 }
 
-heron_synch_channel*	heron_synch_channel::create()
-{
+heron_synch_channel*	heron_synch_channel::create(uint channel_id){
 	heron_synch_channel* channel = new heron_synch_channel();
-
 	if(socketpair(AF_UNIX, SOCK_DGRAM, 0, channel->m_socketpair) < 0)
-        {
-                log_event("init.socketpair error,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-		return nullptr;
-        }
-
-        if(-1 == fcntl(channel->m_socketpair[0], F_SETFL, O_NONBLOCK)
-        	|| -1 == fcntl(channel->m_socketpair[1], F_SETFL, O_NONBLOCK))
-        {
-                log_event("set nonblock failed,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-		return nullptr;
-        }
-
-	for(int n = 0; n < 2; ++n)
 	{
-		heron_synch_buffer *buff = &channel->m_synch_buffs[n];
-		int fd = channel->m_socketpair[n];
-		channel->m_routines[n] = heron_channel_routine::create(buff, fd);
+                log_fatal("Create-Channel.socketpair error: channel_id=%d,errno=%d,errmsg=%s", channel_id, errno, strerror(errno));
+		return nullptr;
+        }
+
+        if(fcntl(channel->m_socketpair[0], F_SETFL, O_NONBLOCK) < 0)
+        {
+                log_fatal("Create-Channel.set-nonblock error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, errno, strerror(errno));
+		return nullptr;
+        }
+
+        if(fcntl(channel->m_socketpair[2], F_SETFL, O_NONBLOCK) < 0)
+        {
+                log_fatal("Create-Channel.set-nonblock error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, errno, strerror(errno));
+		return nullptr;
+        }
+
+        const socklen_t buf_len = 64 * 1024;
+        if(setsockopt(channel->m_socketpair[0], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len)) < 0){
+                log_alert("Create-Channel.set-sndbuf error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, channel->m_socketpair[0], errno, strerror(errno));
 	}
+        if(setsockopt(channel->m_socketpair[0], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len)) < 0){
+                log_alert("Create-Channel.set-rcvbuf error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, channel->m_socketpair[0], errno, strerror(errno));
+	}
+        if(setsockopt(channel->m_socketpair[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len)) < 0){
+                log_alert("Create-Channel.set-sndbuf error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, channel->m_socketpair[0], errno, strerror(errno));
+	}
+        if(setsockopt(channel->m_socketpair[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len)) < 0){
+                log_alert("Create-Channel.set-rcvbuf error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
+				channel_id, channel->m_socketpair[0], errno, strerror(errno));
+	}
+
 	return  channel;
 }
 

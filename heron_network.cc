@@ -68,7 +68,7 @@ tcp_listen_routine* tcp_listen_routine::create(sint fd)
 
 tcp_listen_routine::~tcp_listen_routine()
 {
-        log_event( "~tcp_listen_routine");
+        log_vital( "~tcp_listen_routine");
 }
 
 void    heron_network_thread::react()
@@ -90,7 +90,7 @@ void    heron_network_thread::react()
                 int result = epoll_wait(m_epoll_fd, arr_events, fetch_num, 0);
                 if(result < 0 && errno != EINTR)
                 {
-                        log_error( "process_events.epoll_wait,epoll_fd=%d,fetch_num=%u,%d occurred,errmsg=%s",
+                        m_log_writer->log_event("process_events.epoll_wait,epoll_fd=%d,fetch_num=%u,%d occurred,errmsg=%s",
                                         m_epoll_fd, fetch_num,errno, strerror(errno));
                 }
 
@@ -112,21 +112,17 @@ int64_t        heron_network_thread::gen_monotonic_ms()
 
 int     tcp_listen_routine::on_readable()
 {
-        while(true)
-        {
+        while(true){
                 socklen_t       len = sizeof(struct     sockaddr_in);
                 struct  sockaddr_in     addr;
 
                 int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
-                if(conn_fd >= 0)
-                {
+                if(conn_fd >= 0){
                 }
-                else if(EAGAIN == errno)
-                {
+                else if(EAGAIN == errno){
                         break;
                 }
-                else
-                {
+		else{
                         log_error( "on_readable.accept, %d occurred", errno);
                 }
         }
@@ -137,35 +133,6 @@ void    tcp_listen_routine::on_error()
 {
         log_error( "on_error was triggered");
         close_fd();
-}
-
-
-int     heron_network_thread::init()
-{
-        if(socketpair(AF_UNIX, SOCK_DGRAM, 0, m_log_fds) < 0)
-        {
-                log_fatal("init.socketpair error,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                return  -1;
-        }
-
-                dup2(m_log_fds[0], STDOUT_FILENO);
-                dup2(m_log_fds[0], STDERR_FILENO);
-
-        if(-1 == fcntl(m_log_fds[0], F_SETFL, O_NONBLOCK)
-                        || -1 == fcntl(m_log_fds[1], F_SETFL, O_NONBLOCK))
-        {
-                log_fatal("set nonblock failed,errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                return  -1;
-        }
-
-        const socklen_t buf_len = 4 * 1024 * 1024;
-        setsockopt(m_log_fds[0], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[0], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len));
-        setsockopt(m_log_fds[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len));
-        return  0;
 }
 
 
@@ -250,13 +217,13 @@ sint    heron_network_thread::close_routine(ulong routine_id)
 
         if(nullptr != rt)
         {
-                log_event("close_routine routine_id=%lu", routine_id);
+                m_log_writer->log_event("close_routine routine_id=%lu", routine_id);
                 unregister_events(m_epoll_fd, rt);
                 delete  rt;
         }
         else
         {
-                log_error( "close_routine routine_id=%ld not found",
+                m_log_writer->log_event( "close_routine routine_id=%ld not found",
                                 routine_id);
         }
 	return 0;
@@ -302,7 +269,7 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
 
                 if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
                 {
-                        log_event("add_routine.epoll_ctl,events=%d",
+                        m_log_writer->log_event("add_routine.epoll_ctl,events=%d",
                                         events);
                 }
                 else
@@ -313,7 +280,7 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
         }
         else
         {
-                log_event("add_routine no_events");
+                m_log_writer->log_event("add_routine no_events");
         }
 
         if(rt->m_proxy_id == m_proxy_id && rt->m_recv.data_len() > 0)

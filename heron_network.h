@@ -34,6 +34,7 @@ public:
 	uint	m_proxy_id;
 	int	m_log_fds[2];
 protected:
+        heron_log_writer*       m_log_writer;
 	void	half_exit();
 	sint	m_managed_events;
 	void	run();
