@@ -154,49 +154,6 @@ heron_synch_channel*	heron_synch_channel::create(heron_engine *engine, uint chan
 	return  channel;
 }
 
-heron_log_channel*    heron_log_channel::create(heron_engine *engine, uint logger_id){
-        heron_log_channel* logger = new heron_log_channel();
-        if(socketpair(AF_UNIX, SOCK_DGRAM, 0, logger->m_socketpair) < 0)
-        {
-                engine->log_fatal("Create-Channel.socketpair error: logger_id=%d,errno=%d,errmsg=%s", logger_id, errno, strerror(errno));
-                return nullptr;
-        }
-
-        if(fcntl(logger->m_socketpair[0], F_SETFL, O_NONBLOCK) < 0)
-        {
-                engine->log_fatal("Create-Channel.set-nonblock error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, errno, strerror(errno));
-                return nullptr;
-        }
-
-        if(fcntl(logger->m_socketpair[2], F_SETFL, O_NONBLOCK) < 0)
-        {
-                engine->log_fatal("Create-Channel.set-nonblock error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, errno, strerror(errno));
-                return nullptr;
-        }
-
-        const socklen_t buf_len = 64 * 1024;
-        if(setsockopt(logger->m_socketpair[0], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len)) < 0){
-                engine->log_alert("Create-Channel.set-sndbuf error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, logger->m_socketpair[0], errno, strerror(errno));
-        }
-        if(setsockopt(logger->m_socketpair[0], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len)) < 0){
-                engine->log_alert("Create-Channel.set-rcvbuf error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, logger->m_socketpair[0], errno, strerror(errno));
-        }
-        if(setsockopt(logger->m_socketpair[1], SOL_SOCKET, SO_SNDBUF, &buf_len, sizeof(buf_len)) < 0){
-                engine->log_alert("Create-Channel.set-sndbuf error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, logger->m_socketpair[0], errno, strerror(errno));
-        }
-        if(setsockopt(logger->m_socketpair[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len)) < 0){
-                engine->log_alert("Create-Channel.set-rcvbuf error: logger_id=%d,fd=%d,errno=%d,errmsg=%s",
-                                logger_id, logger->m_socketpair[0], errno, strerror(errno));
-        }
-
-        return  logger;
-}
-
 heron_channel_routine::heron_channel_routine(heron_synch_buffer *buff, int fd):heron_routine(0,fd),m_buff(buff)
 {
 }

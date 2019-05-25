@@ -11,19 +11,37 @@
 
 
 namespace   heron{namespace tati{
-tcp_listen_routine* tcp_listen_routine::create(heron_engine *engine, sint fd)
+heron_listen_routine* heron_listen_routine::create(heron_engine *engine, sint fd)
 {
-        tcp_listen_routine *sr = new tcp_listen_routine(0, fd);
+        heron_listen_routine *sr = new heron_listen_routine(0, fd);
         if(nullptr == sr) 
         {   
-                engine->log_fatal( "tcp_listen_routine.create bad_alloc,close fd=%d", fd);
+                engine->log_fatal( "heron_listen_routine.create bad_alloc,close fd=%d", fd);
                 ::close(fd);
         }   
-        return  sr; 
+	return  sr; 
 }
 
-tcp_listen_routine::~tcp_listen_routine()
+heron_listen_routine::~heron_listen_routine()
 {
+}
+
+heron_network_thread*   heron_network_thread::create(heron_engine *engine)
+{
+	heron_network_thread*   thread = new heron_network_thread();
+	thread->m_network_channel = heron_synch_channel::create(engine, 1);
+        if (nullptr == thread->m_network_channel){
+                engine->log_fatal("");
+                delete  thread;
+                return  nullptr;
+        }
+        thread->m_control_channel = heron_synch_channel::create(engine, 1);
+        if (nullptr == thread->m_control_channel){
+                engine->log_fatal("");
+		delete	thread;
+                return  nullptr;
+        }
+        return  thread;
 }
 
 void    heron_network_thread::react()
@@ -65,7 +83,7 @@ int64_t        heron_network_thread::gen_monotonic_ms()
         return        ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-int     tcp_listen_routine::on_readable()
+int     heron_listen_routine::on_readable()
 {
         while(true){
                 socklen_t       len = sizeof(struct     sockaddr_in);
@@ -84,7 +102,7 @@ int     tcp_listen_routine::on_readable()
         return  0;
 }
 
-void    tcp_listen_routine::on_error()
+void    heron_listen_routine::on_error()
 {
         m_log_writer->log_event( "on_error was triggered");
         close_fd();
@@ -211,7 +229,7 @@ void    heron_network_thread::half_exit()
         //do not accept new channels
 }
 
-sint   heron_network_thread::add_routine(heron_routine *rt)
+sint   heron_network_thread::register_routine(heron_routine *rt)
 {
         m_pool.insert_element(rt->m_routine_id, rt);
 
@@ -238,9 +256,6 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
                 m_log_writer->log_event("add_routine no_events");
         }
 
-        if(rt->m_proxy_id == m_proxy_id && rt->m_recv->data_len() > 0)
-        {
-        }
 	return	heron_result_state::success;
 }
 

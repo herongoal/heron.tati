@@ -39,10 +39,18 @@ public:
                return true;
         }
 	virtual sint    append_send_data(const void *data, unsigned len);
-	sint	log_event(const char *fmt, ...){}
-	sint	log_alert(const char *fmt, ...){}
-	sint	log_vital(const char *fmt, ...){}
-	sint	log_fatal(const char *fmt, ...){}
+	sint	log_event(const char *fmt, ...){
+		return	0;
+	}
+	sint	log_alert(const char *fmt, ...){
+		return	0;
+	}
+	sint	log_vital(const char *fmt, ...){
+		return	0;
+	}
+	sint	log_fatal(const char *fmt, ...){
+		return	0;
+	}
 protected:
         heron_synch_buffer*     m_buff;
 };

@@ -5,6 +5,7 @@
 #include "heron_define.h"
 #include "heron_routine.h"
 #include "heron_pool.h"
+#include "heron_channel.h"
 #include <sys/epoll.h>
 #include <pthread.h>
 
@@ -17,6 +18,7 @@ class	heron_engine;
 class   heron_network_thread{
 public:
         heron_network_thread():m_pool(32*1024){}
+	static  heron_network_thread* create(heron_engine *engine);
 	void	process_events(ulong routine_id, uint events);
 	void	set_routine_timeout(ulong routine_id, int timeout_ms);
 	void	process_timers(){}
@@ -24,7 +26,7 @@ public:
 	void	inspect();
 	sint	send_message(ulong dest_routine_id, const void *data, unsigned len);
 	sint	close_routine(ulong routine_id);
-	sint	add_routine(heron_routine *rt);
+	sint	register_routine(heron_routine *rt);
 	uint    get_changed_events() const{
                 return  EPOLLIN & ~m_managed_events;
         }
@@ -33,9 +35,13 @@ public:
 	static void*	start(void* arg);
 	int	m_epoll_fd;
 	uint	m_proxy_id;
-	int	m_log_fds[2];
 protected:
-        heron_log_writer*       m_log_writer;
+	heron_synch_channel*      m_network_channel;
+	heron_synch_channel*      m_control_channel;
+
+        heron_log_writer*         m_log_writer;
+        heron_channel_routine*    m_channel_routine;
+
 	void	half_exit();
 	sint	m_managed_events;
 	void	run();
@@ -43,10 +49,10 @@ protected:
 	friend  class   heron_engine;
 	pthread_t	m_thread;
 };
-class   tcp_listen_routine:public heron_routine{
+class   heron_listen_routine:public heron_routine{
 public:
-        static  tcp_listen_routine*     create(heron_engine* engine, sint fd);
-	virtual ~tcp_listen_routine();
+        static  heron_listen_routine*     create(heron_engine* engine, sint fd);
+	virtual ~heron_listen_routine();
 
 	virtual bool    vital() const{
 		return	true;
@@ -56,6 +62,7 @@ public:
 		return  0;
 	}
 	sint    on_event(heron_event ev){
+		return	0;
 	}
 
 	uint	get_changed_events(){
@@ -69,7 +76,7 @@ public:
 	void                on_error();
 
 private:
-	tcp_listen_routine(uint label, int fd):heron_routine(label,fd){}
+	heron_listen_routine(uint label, int fd):heron_routine(label,fd){}
 	heron_log_writer*	m_log_writer;
 	static const int        s_reuse_port;
 };

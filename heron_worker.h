@@ -4,6 +4,7 @@
 
 #include "heron_define.h"
 #include "heron_logger.h"
+#include "heron_channel.h"
 #include <pthread.h>
 
 
@@ -16,7 +17,8 @@ public:
 protected:
 	uint	m_proxy_id;
 	void*	run();
-	heron_log_writer	*m_log_writer;
+	heron_channel_routine*  m_channel_routine;
+	heron_log_writer*       m_log_writer;
 	friend class	heron_engine;
 	pthread_t	m_thread;
 };//end of class heron_worker_thread
