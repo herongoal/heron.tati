@@ -11,7 +11,9 @@
 
 using namespace std;
 namespace   heron{namespace tati{
+class	heron_log_writer;
 class	heron_routine;
+class	heron_engine;
 class   heron_network_thread{
 public:
         heron_network_thread();
@@ -43,7 +45,7 @@ protected:
 };
 class   tcp_listen_routine:public heron_routine{
 public:
-        static  tcp_listen_routine*     create(sint fd);
+        static  tcp_listen_routine*     create(heron_engine* engine, sint fd);
 	virtual ~tcp_listen_routine();
 
 	virtual bool    vital() const{
@@ -62,6 +64,7 @@ public:
 
 private:
 	tcp_listen_routine(uint label, int fd);
+	heron_log_writer*	m_log_writer;
 	static const int        s_reuse_port;
 };
 }}//namespace heron::tati

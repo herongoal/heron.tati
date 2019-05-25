@@ -73,10 +73,12 @@ private:
 };//end of class   heron_synch_buffer
 
 class	heron_channel_routine;
+class	heron_engine;
+
 class	heron_synch_channel{
 public:
 	heron_synch_channel();
-	static	heron_synch_channel*	create(uint channel_id);
+	static	heron_synch_channel*	create(heron_engine *engine, uint channel_id);
 private:
 	heron_synch_buffer	m_synch_buffs[2];
 	int			m_socketpair[2];

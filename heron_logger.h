@@ -7,13 +7,6 @@
 
 
 namespace heron{namespace tati{
-void log_trace(const char *fmt, ...);
-void log_debug(const char *fmt, ...);
-void log_error(const char *fmt, ...);
-void log_alert(const char *fmt, ...);
-void log_vital(const char *fmt, ...);
-void log_fatal(const char *fmt, ...);
-
 enum    log_level{
         log_level_trace = 1,
         log_level_debug = 2,
@@ -47,6 +40,7 @@ public:
 	sint	log_event(const char *fmt, ...);
 	sint	log_alert(const char *fmt, ...);
 	sint	log_vital(const char *fmt, ...);
+	sint	log_fatal(const char *fmt, ...);
 protected:
         heron_synch_buffer*     m_buff;
 };

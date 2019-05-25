@@ -68,6 +68,8 @@ public:
 		return  m_state;
 	}
 private:
+	friend  class   heron_synch_channel;
+	friend  class   tcp_listen_routine;
 	struct	listen_endpoint{
 		sint	fd;
 		ushort	port;
@@ -76,6 +78,16 @@ private:
 	vector<listen_endpoint>	m_endpoints;
 	uchar   m_state;
 	heron_engine();
+
+	void log_alert(const char *fmt, ...){
+	}
+	void log_vital(const char *fmt, ...){
+	}
+	void log_fatal(const char *fmt, ...){
+	}
+
+	sint create_listen_endpoint(const char *ipaddr, ushort port);
+
 	/*
 		each network thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data
 		each heavy work thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data

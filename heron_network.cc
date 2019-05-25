@@ -11,56 +11,12 @@
 
 
 namespace   heron{namespace tati{
-sint    create_listen_endpoint(const char *ipaddr, ushort port)
-{
-        struct sockaddr_in  addr = {AF_INET, htons(port), {0u},
-                        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-
-        if(0 == inet_aton(ipaddr, &addr.sin_addr)){
-                log_error( "tcp_listen_routine.inet_aton error,ipaddr=%s",
-                                errno, strerror(errno));
-		return	-1;
-        }
-
-        int     fd = socket(AF_INET, SOCK_STREAM, 0);
-        if(fd < 0){
-                log_error( "tcp_listen_routine.socket errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-		return	-1;
-        }
-
-        if(-1 == fcntl(fd, F_SETFL, O_NONBLOCK)){
-                log_error( "tcp_listen_routine.fcntl errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                ::close(fd);
-		return	-1;
-        }
-
-	const sint reuse_port = 1;
-        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse_port, sizeof(reuse_port));
-        if(0 != bind(fd, (struct sockaddr *)&addr, sizeof(addr))){
-                log_error( "tcp_listen_routine.bind errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                ::close(fd);
-		return	-1;
-        }
-
-        if(0 != listen(fd, 2000))
-        {
-                log_error( "tcp_listen_routine.listen errno=%d,errmsg=%s",
-                                errno, strerror(errno));
-                ::close(fd);
-		return	-1;
-        }
-	return	fd;
-}
-
-tcp_listen_routine* tcp_listen_routine::create(sint fd)
+tcp_listen_routine* tcp_listen_routine::create(heron_engine *engine, sint fd)
 {
         tcp_listen_routine *sr = new tcp_listen_routine(0, fd);
         if(nullptr == sr) 
         {   
-                log_error( "tcp_listen_routine.create bad_alloc,close fd=%d", fd);
+                engine->log_fatal( "tcp_listen_routine.create bad_alloc,close fd=%d", fd);
                 ::close(fd);
         }   
         return  sr; 
@@ -68,7 +24,6 @@ tcp_listen_routine* tcp_listen_routine::create(sint fd)
 
 tcp_listen_routine::~tcp_listen_routine()
 {
-        log_vital( "~tcp_listen_routine");
 }
 
 void    heron_network_thread::react()
@@ -123,7 +78,7 @@ int     tcp_listen_routine::on_readable()
                         break;
                 }
 		else{
-                        log_error( "on_readable.accept, %d occurred", errno);
+                        m_log_writer->log_event( "on_readable.accept, %d occurred", errno);
                 }
         }
         return  0;
@@ -131,25 +86,25 @@ int     tcp_listen_routine::on_readable()
 
 void    tcp_listen_routine::on_error()
 {
-        log_error( "on_error was triggered");
+        m_log_writer->log_event( "on_error was triggered");
         close_fd();
 }
 
 
-sint    heron_network_thread::send_message(ulong dest_routine_id, const void *data, unsigned len)
+sint    heron_network_thread::send_message(ulong dest_routine_id, const void *data, uint len)
 {
         heron_routine *rt = (heron_routine *)m_routine_pool.search_element(dest_routine_id);
 
         if(nullptr == rt)
         {
-                log_error( "send_message to routine=%ld, not exist",
+                m_log_writer->log_event( "send_message to routine=%ld, not exist",
                                 dest_routine_id);
                 return        false;
         }
 
         if(!rt->append_send_data(data, len))
         {
-                log_error( "send_message to routine=%ld, failed",
+                m_log_writer->log_event( "send_message to routine=%ld, failed",
                                 dest_routine_id );
                 return        false;
         }
@@ -274,7 +229,7 @@ sint   heron_network_thread::add_routine(heron_routine *rt)
                 }
                 else
                 {
-                        log_error( "add_routine.epoll_ctl,events=%d, errno=%d",
+                        m_log_writer->log_event( "add_routine.epoll_ctl,events=%d, errno=%d",
                                         events, errno);
                 }
         }
@@ -302,7 +257,7 @@ void    heron_network_thread::process_events(ulong routine_id, const unsigned ev
         heron_routine *rt = (heron_routine *)m_routine_pool.search_element(routine_id);
         if(nullptr == rt)
         {
-                log_error("process_events,routine_id=%lu,events=%u",
+                m_log_writer->log_event("process_events,routine_id=%lu,events=%u",
                                 routine_id, events);
                 return        ;
         }
@@ -318,7 +273,7 @@ void    heron_network_thread::process_events(ulong routine_id, const unsigned ev
                         ev.data.u64 = rt->m_routine_id;
                         if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
                         {
-                                log_error( "failed to depress writable=%u",
+                                m_log_writer->log_event( "failed to depress writable=%u",
                                                 ev.events);
                         }
                 }
