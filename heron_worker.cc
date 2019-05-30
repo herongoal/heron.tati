@@ -2,6 +2,7 @@
 #include "heron_engine.h"
 
 #include <signal.h>
+#include <unistd.h>
 
 
 namespace heron{namespace tati{
@@ -28,8 +29,10 @@ void *heron_worker_thread::start(void *arg)
 void*   heron_worker_thread::run()
 {       
         while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
+		usleep(1*1000);
         }
         while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
+		usleep(1*1000);
         }
 	return	nullptr;
 }

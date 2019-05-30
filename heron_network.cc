@@ -41,6 +41,13 @@ heron_network_thread*   heron_network_thread::create(heron_engine *engine)
 		delete	thread;
                 return  nullptr;
         }
+
+	thread->m_epoll_fd = epoll_create(4096);
+	if (thread->m_epoll_fd < 0){
+                engine->log_fatal("create epoll error");
+		delete	thread;
+                return  nullptr;
+	}
         return  thread;
 }
 
@@ -91,6 +98,7 @@ int     heron_listen_routine::on_readable()
 
                 int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
                 if(conn_fd >= 0){
+                        m_log_writer->log_event("new con");
                 }
                 else if(EAGAIN == errno){
                         break;
@@ -237,18 +245,18 @@ sint   heron_network_thread::register_routine(heron_routine *rt)
         {
                 const int events = rt->get_changed_events();
                 struct  epoll_event ev;
-                ev.events = events;
+                ev.events = EPOLLIN;
                 ev.data.u64 = rt->m_routine_id;
 
                 if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
                 {
-                        m_log_writer->log_event("add_routine.epoll_ctl,events=%d",
-                                        events);
+                        m_log_writer->log_event("done add_routine.epoll_ctl,events=%d, errmsg=%s",
+                                        events, strerror(errno));
                 }
                 else
                 {
-                        m_log_writer->log_event( "add_routine.epoll_ctl,events=%d, errno=%d",
-                                        events, errno);
+                        m_log_writer->log_event( "add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
+                                        m_epoll_fd,rt->m_fd,events, errno, strerror(errno));
                 }
         }
         else
@@ -262,8 +270,11 @@ sint   heron_network_thread::register_routine(heron_routine *rt)
 void    heron_network_thread::run()
 {
         while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
+		react();
+		usleep(1000);
         }
         while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
+		usleep(1000);
         }
 }
 

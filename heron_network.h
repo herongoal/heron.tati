@@ -66,7 +66,7 @@ public:
 	}
 
 	uint	get_changed_events(){
-		return  0;
+		return  EPOLLIN & ~m_managed_events;
 	}
 
 	virtual int     inspect(){
