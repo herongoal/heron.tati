@@ -347,6 +347,7 @@ sint    heron_engine::listen_at_port(const char *ipaddr, ushort port)
 			log_fatal("failed to create listen routine: fd=%d", fd);
 			return	-1;
 		}
+		rtn->m_proxy = m_proxies[n];
 		log_vital("Create-Listen-Routine: fd=%d", fd);
 		sint result = m_proxies[n]->register_routine(rtn);
 		if (heron_result_state::success!=result){

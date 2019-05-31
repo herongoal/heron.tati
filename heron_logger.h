@@ -25,6 +25,10 @@ enum    log_level{
         log_level_fatal = 8,
 };
 
+void    log_error(const char *format, ...);
+void    log_trace(const char *format, ...);
+void    log_alert(const char *format, ...);
+void    log_event(const char *format, ...);
 sint	log_append(log_level level, const char *fmt, va_list ap);
 
 class	heron_synch_buffer;
@@ -52,6 +56,13 @@ public:
 	sint    append_send_data(const void *data, unsigned len){
 		return	heron_result_state::success;
 	}
+	sint    log_error(const char *fmt, ...){
+                va_list ap;
+                va_start(ap, fmt);
+                sint    result = log_append(log_level_error, fmt, ap);
+                va_end(ap);
+                return  result;
+        }
 	sint	log_event(const char *fmt, ...){
 		va_list ap;
                 va_start(ap, fmt);

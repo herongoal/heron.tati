@@ -42,21 +42,25 @@ bool    heron_pool::insert_element(ulong id, void *elem){
 	m_node_list.m_prev = node;
 
 	m_index[node->m_id] = node;
-
-	cout << "size=" << m_index.size() << endl;
 	return	true;
 }
 
 void*   heron_pool::remove_element(ulong id)
 {
 	unordered_map<ulong, tati_node_t*>::iterator pos = m_index.find(id);
-        
         if(pos == m_index.end()){
                 return  nullptr;
         }
 
-	void*   ptr = pos->second;
-	return  ptr;
+	tati_node_t *node = pos->second;
+	node->m_next->m_prev = node->m_prev;
+	node->m_prev->m_next = node->m_next;
+	m_index.erase(pos);
+
+	node->m_next = m_node_pool.m_next;
+	node->m_prev = &m_node_pool;
+	m_node_pool.m_next->m_prev = node;
+	m_node_pool.m_next = node;
 }
 
 void*   heron_pool::search_element(ulong id)
@@ -65,8 +69,8 @@ void*   heron_pool::search_element(ulong id)
 	if(pos == m_index.end()){
 		return  nullptr;
 	}
-	cout << "found+" << endl;
-	return	pos->second;
+	tati_node_t* node = pos->second;
+	return	node->m_elem;
 }
 
 void*   heron_pool::current_element()

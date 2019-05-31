@@ -80,23 +80,6 @@ public:
         ulong                   m_last_sync_time;
         ulong                   m_last_inspect_time;
 };
-
-class   heron_tcp_routine: public heron_routine{
-public:
-	static  heron_tcp_routine*      create(uint label, int fd);
-        heron_tcp_routine();
-        virtual ~heron_tcp_routine();
-        sint on_events(heron_event ev);
-        sint do_connect(ulong, const char *ipaddr, uint16_t port);
-	sint check_conn_state(int err);
-	virtual sint    append_send_data(const void *data, unsigned len);
-	uint    get_changed_events();
-	sint on_writable();
-	sint on_readable();
-	sint on_error();
-private:
-	static const uint tcp_events = EPOLLIN | EPOLLOUT;
-};
 }}//namespace heron::tati
 
 

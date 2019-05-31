@@ -6,6 +6,7 @@
 #include "heron_routine.h"
 #include "heron_pool.h"
 #include "heron_channel.h"
+#include "heron_logger.h"
 #include <sys/epoll.h>
 #include <pthread.h>
 
@@ -39,7 +40,7 @@ protected:
 	heron_synch_channel*      m_network_channel;
 	heron_synch_channel*      m_control_channel;
 
-        heron_log_writer*         m_log_writer;
+        heron_log_writer*         m_logger;
         heron_channel_routine*    m_channel_routine;
 
 	void	half_exit();
@@ -75,8 +76,30 @@ public:
 
 private:
 	heron_listen_routine(uint label, int fd):heron_routine(label,fd){}
-	heron_log_writer*	m_log_writer;
+	friend	class		heron_engine;
+	heron_network_thread*	m_proxy;
+	heron_log_writer*	m_logger;
 	static const int        s_reuse_port;
+};
+
+class   heron_tcp_routine: public heron_routine{
+public:
+        static  heron_tcp_routine*      create(uint label, int fd);
+        heron_tcp_routine(uint label, int fd):heron_routine(label, fd){}
+        virtual ~heron_tcp_routine();
+        sint on_events(heron_event ev);
+        sint do_connect(ulong, const char *ipaddr, uint16_t port);
+        sint check_conn_state(int err);
+	sint	do_nonblock_recv(heron::tati::heron_buffer&);
+	sint	do_nonblock_write(const void *buf, unsigned len, unsigned &sent);
+        virtual sint    append_send_data(const void *data, unsigned len);
+        uint    get_changed_events();
+        sint on_writable();
+        sint on_readable();
+        sint on_error();
+private:
+        heron_log_writer*       m_logger;
+        static const uint tcp_events = EPOLLIN | EPOLLOUT;
 };
 }}//namespace heron::tati
 #endif//_HERON_NETWORK_H_

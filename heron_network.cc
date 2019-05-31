@@ -29,7 +29,6 @@ heron_listen_routine::~heron_listen_routine()
 sint	heron_listen_routine::on_events(heron_event events)
 {
         if(events & heron_socket_readable){
-		cout << "sss+++" << endl;
 		return	on_readable();
         }
 
@@ -77,7 +76,7 @@ void    heron_network_thread::dispose_events(sint timeout_in_ms)
                 int result = epoll_wait(m_epoll_fd, arr_events, max_events, timeout_in_ms);
                 if(result < 0 && errno != EINTR)
                 {
-                        m_log_writer->log_event("epoll_wait,epoll_fd=%d,max_events=%u,%d occurred,errmsg=%s",
+                        m_logger->log_event("epoll_wait,epoll_fd=%d,max_events=%u,%d occurred,errmsg=%s",
                                         m_epoll_fd, max_events, errno, strerror(errno));
                 }
 
@@ -117,13 +116,15 @@ int     heron_listen_routine::on_readable()
 
                 int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
                 if(conn_fd >= 0){
-                        m_log_writer->log_event("new con");
+			heron_tcp_routine *rtn = heron_tcp_routine::create(0, conn_fd);
+			
+                        m_logger->log_event("new con");
                 }
                 else if(EAGAIN == errno){
                         break;
                 }
 		else{
-                        m_log_writer->log_event( "on_readable.accept, %d occurred", errno);
+                        m_logger->log_event( "on_readable.accept, %d occurred", errno);
                 }
         }
         return  0;
@@ -131,7 +132,7 @@ int     heron_listen_routine::on_readable()
 
 void    heron_listen_routine::on_error()
 {
-        m_log_writer->log_event( "on_error was triggered");
+        m_logger->log_event( "on_error was triggered");
         close_fd();
 }
 
@@ -142,14 +143,14 @@ sint    heron_network_thread::send_message(ulong dest_routine_id, const void *da
 
         if(nullptr == rt)
         {
-                m_log_writer->log_event( "send_message to routine=%ld, not exist",
+                m_logger->log_event( "send_message to routine=%ld, not exist",
                                 dest_routine_id);
                 return        false;
         }
 
         if(!rt->append_send_data(data, len))
         {
-                m_log_writer->log_event( "send_message to routine=%ld, failed",
+                m_logger->log_event( "send_message to routine=%ld, failed",
                                 dest_routine_id );
                 return        false;
         }
@@ -218,13 +219,13 @@ sint    heron_network_thread::close_routine(ulong routine_id)
 
         if(nullptr != rt)
         {
-                m_log_writer->log_event("close_routine routine_id=%lu", routine_id);
+                m_logger->log_event("close_routine routine_id=%lu", routine_id);
                 //unregister_events(m_epoll_fd, rt);
                 delete  rt;
         }
         else
         {
-                m_log_writer->log_event( "close_routine routine_id=%ld not found",
+                m_logger->log_event( "close_routine routine_id=%ld not found",
                                 routine_id);
         }
 	return 0;
@@ -273,18 +274,18 @@ sint   heron_network_thread::register_routine(heron_routine *rt)
 
                 if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
                 {
-                        m_log_writer->log_event("done add_routine.epoll_ctl,events=%d, errmsg=%s",
+                        m_logger->log_event("done add_routine.epoll_ctl,events=%d, errmsg=%s",
                                         events, strerror(errno));
                 }
                 else
                 {
-                        m_log_writer->log_event( "add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
+                        m_logger->log_event( "add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
                                         m_epoll_fd,rt->m_fd,events, errno, strerror(errno));
                 }
         }
         else
         {
-                m_log_writer->log_event("add_routine no_events");
+                m_logger->log_event("add_routine no_events");
         }
 
 	return	heron_result_state::success;
@@ -302,12 +303,131 @@ void    heron_network_thread::run()
         }
 }
 
+int     heron_tcp_routine::do_nonblock_recv(heron_buffer &cb)
+{
+        char            buff[64 * 1024];
+        unsigned        max_recv = cb.unused_len();
+
+        if(max_recv > sizeof(buff))
+        {       
+                max_recv = sizeof(buff);
+        }
+
+        int len = read(m_fd, buff, max_recv);
+        if(len > 0)
+        {       
+                if(cb.append(buff, len))
+                {       
+                }
+                else    
+                {       
+                        m_logger->log_error( "do_nonblock_recv,%d bytes save failed,buf.data_len=%u",
+                                        len, cb.data_len());
+                }
+                m_stat.recv_times += 1;
+                m_stat.recv_bytes += len;
+                if(len == (int)max_recv)
+                {       
+                        return  0;
+                }
+                else    
+                {       
+                        return  len;
+                }
+        }
+        else if(len == 0)
+        {
+                m_logger->log_event("do_nonblock_recv,peer closed");
+                return  -1;
+        }
+        else if(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR)
+        {
+                m_logger->log_alert("nothing was read");
+                return  1;
+        }
+        else
+        {
+                m_logger->log_error( "read.errno=%d,strerror=%s",
+                                errno, strerror(errno));
+                return  -1;
+        }
+}
+
+sint    heron_tcp_routine::append_send_data(const void *data, uint len)
+{
+        if(m_writable && m_send->data_len() == 0)
+        {
+                unsigned sent = 0;
+                if(do_nonblock_write(data, len, sent) >= 0)
+                {
+                        if(sent < len)
+                        {
+                                m_writable = false;
+                                return  m_send->append((const char *)data + sent, len - sent);
+                        }
+                        return  true;
+                }
+                else
+                {
+                        m_logger->log_error( "append_send_data.do_nonblock_write failed");
+                        return  false;
+                }
+        }
+
+        if((m_send->append(data, len)))
+        {
+        }
+        else
+        {
+                m_logger->log_error( "append_send_data %u bytes failed!", len);
+                return  false;
+        }
+
+
+        if(!m_writable)
+        {
+        }
+}
+
+int     heron_tcp_routine::do_nonblock_write(const void *buf, unsigned len, unsigned &sent)
+{
+        while(sent < len)
+        {
+                int ret = write(m_fd, (const char *)buf + sent, len - sent);
+
+                ++m_stat.send_times;
+                if(ret >= 0)
+                {
+                        sent += ret;
+                        m_stat.send_bytes += ret;
+                        continue;
+                }
+
+                const int err = errno;
+                if(err == EWOULDBLOCK || err == EAGAIN)
+                {
+                        m_writable = false;
+                        return  0;
+                }
+                else if(err == EINTR)
+                {
+                        continue;
+                }
+                else
+                {
+                        return  -1;
+                }
+        }
+
+        return  sent;
+}
+
 void    heron_network_thread::process_events(ulong routine_id, heron_event events)
 {
         heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
         if(nullptr == rt)
         {
-                m_log_writer->log_event("process_events,routine_id=%lu,events=%u",
+                m_logger->log_event("process_events,routine_id=%lu,events=%u",
                                 routine_id, events);
                 return        ;
         }
@@ -318,7 +438,7 @@ void    heron_network_thread::process_events(ulong routine_id, heron_event event
                         ev.data.u64 = rt->m_routine_id;
                         if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
                         {       
-                                m_log_writer->log_event( "failed to depress writable=%u",
+                                m_logger->log_event( "failed to depress writable=%u",
                                                 ev.events);
                         }
 	*/
