@@ -58,13 +58,13 @@ struct  heron_routine_stat{
         ulong        recv_bytes;
 };
 
-enum    heron_event{
-        heron_socket_readable = 1 << 0,
-        heron_socket_writable = 1 << 1,
-        heron_socket_read_hup = 1 << 2,
-        heron_socket_peer_hup = 1 << 3,
-        heron_socket_error = 1 << 4,
-};
+typedef sint	heron_event;
+const	heron_event	heron_socket_event_none = 0;
+const	heron_event	heron_socket_readable = 1 << 0;
+const   heron_event	heron_socket_writable = 1 << 1;
+const   heron_event	heron_socket_read_hup = 1 << 2;
+const   heron_event	heron_socket_peer_hup = 1 << 3;
+const   heron_event	heron_socket_error = 1 << 4;
 
 enum	enm_directive{
 	directive_proc_msg = 10,

@@ -1,4 +1,8 @@
 #include "heron_pool.h"
+#include <iostream>
+
+
+using namespace std;
 
 
 namespace heron{namespace tati{
@@ -17,11 +21,29 @@ heron_pool::heron_pool(uint capacity):m_capacity(capacity)
 
 bool    heron_pool::insert_element(ulong id, void *elem){
 	unordered_map<ulong, tati_node_t*>::iterator pos = m_index.find(id);
-
 	if(pos != m_index.end()){
 		return	false;
 	}
+	
+	tati_node_t *node = nullptr;
+	if (m_node_pool.m_next != &m_node_pool){
+		node = m_node_pool.m_next;
+		m_node_pool.m_next = m_node_pool.m_next->m_next;
+		m_node_pool.m_next->m_prev = &m_node_pool;
+	}else{
+		node = new tati_node_t();
+	}
 
+	node->m_id = id;
+	node->m_elem = elem;
+	node->m_prev = m_node_list.m_prev;
+	node->m_next = &m_node_list;
+	m_node_list.m_prev->m_next = node;
+	m_node_list.m_prev = node;
+
+	m_index[node->m_id] = node;
+
+	cout << "size=" << m_index.size() << endl;
 	return	true;
 }
 
@@ -43,6 +65,7 @@ void*   heron_pool::search_element(ulong id)
 	if(pos == m_index.end()){
 		return  nullptr;
 	}
+	cout << "found+" << endl;
 	return	pos->second;
 }
 

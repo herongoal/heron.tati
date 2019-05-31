@@ -26,6 +26,18 @@ heron_listen_routine::~heron_listen_routine()
 {
 }
 
+sint	heron_listen_routine::on_events(heron_event events)
+{
+        if(events & heron_socket_readable){
+		cout << "sss+++" << endl;
+		return	on_readable();
+        }
+
+	if (events &(~heron_socket_readable)){
+		return	-1;
+	}
+}
+
 heron_network_thread*   heron_network_thread::create(heron_engine *engine)
 {
 	heron_network_thread*   thread = new heron_network_thread();
@@ -42,42 +54,49 @@ heron_network_thread*   heron_network_thread::create(heron_engine *engine)
                 return  nullptr;
         }
 
-	thread->m_epoll_fd = epoll_create(4096);
+	thread->m_epoll_fd = epoll_create(32768);
 	if (thread->m_epoll_fd < 0){
                 engine->log_fatal("create epoll error");
+		exit(0);
 		delete	thread;
                 return  nullptr;
 	}
         return  thread;
 }
 
-void    heron_network_thread::react()
+void    heron_network_thread::dispose_events(sint timeout_in_ms)
 {
-        inspect();
-        process_timers();
+        signed  long            max_events = 32;
+        struct  epoll_event     arr_events[max_events];
 
-	struct timespec timeout, remain;
-	timeout.tv_sec = 0;
-	timeout.tv_nsec = 1000 * 1000;
-	nanosleep(&timeout, &remain);
+        if(max_events > m_pool.entity_num()){
+		 max_events = m_pool.entity_num();
+	}
 
-        struct  epoll_event     arr_events[512];
-        uint    fetch_num = sizeof(arr_events) / sizeof(arr_events[0]);
-
-        if(m_pool.entity_num() < fetch_num) fetch_num = m_pool.entity_num();
-        if(fetch_num > 0)
-        {
-                int result = epoll_wait(m_epoll_fd, arr_events, fetch_num, 0);
+        if(max_events > 0){
+                int result = epoll_wait(m_epoll_fd, arr_events, max_events, timeout_in_ms);
                 if(result < 0 && errno != EINTR)
                 {
-                        m_log_writer->log_event("process_events.epoll_wait,epoll_fd=%d,fetch_num=%u,%d occurred,errmsg=%s",
-                                        m_epoll_fd, fetch_num,errno, strerror(errno));
+                        m_log_writer->log_event("epoll_wait,epoll_fd=%d,max_events=%u,%d occurred,errmsg=%s",
+                                        m_epoll_fd, max_events, errno, strerror(errno));
                 }
 
                 for(int n = 0; n < result; ++n)
                 {
                         struct  epoll_event *pe = arr_events + n;
-                        process_events(pe->data.u64, pe->events);
+			heron_event events = heron_socket_event_none;
+
+			//heron_socket_read_hup = 1 << 2,
+			//heron_socket_peer_hup = 1 << 3,
+			//heron_socket_error = 1 << 4,
+
+			if (pe->events & EPOLLIN){
+				events |= heron_socket_readable;
+			}
+			if (pe->events & EPOLLOUT){
+				events |= heron_socket_writable;
+			}
+                        process_events(pe->data.u64, events);
                 }
 	}
 }
@@ -139,25 +158,26 @@ sint    heron_network_thread::send_message(ulong dest_routine_id, const void *da
 
 void* heron_network_thread::start(void* arg)
 {
-                sigset_t        sig_set;
-                sigemptyset(&sig_set);
-                sigaddset(&sig_set, SIGTERM);
-                sigaddset(&sig_set, SIGQUIT);
-                sigaddset(&sig_set, SIGINT);
-                sigaddset(&sig_set, SIGHUP);
-                sigaddset(&sig_set, SIGPIPE);
-                sigaddset(&sig_set, SIGUSR1);
-                sigaddset(&sig_set, SIGUSR2);
-                sigaddset(&sig_set, SIGXFSZ);
-                sigaddset(&sig_set, SIGTRAP);
-                pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
-
-        return  (void *)0;
+	heron_network_thread *thread = static_cast<heron_network_thread *>(arg);
+	sigset_t        sig_set;
+	sigemptyset(&sig_set);
+	sigaddset(&sig_set, SIGTERM);
+	sigaddset(&sig_set, SIGQUIT);
+	sigaddset(&sig_set, SIGINT);
+	sigaddset(&sig_set, SIGHUP);
+	sigaddset(&sig_set, SIGPIPE);
+	sigaddset(&sig_set, SIGUSR1);
+	sigaddset(&sig_set, SIGUSR2);
+	sigaddset(&sig_set, SIGXFSZ);
+	sigaddset(&sig_set, SIGTRAP);
+	pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
+	thread->run();
+	return	nullptr;
 }
 
 void        heron_network_thread::inspect()
 {
-        ulong monotonic_ms = gen_monotonic_ms();
+	ulong monotonic_ms = gen_monotonic_ms();
 
         for(uint n = 0; n < m_pool.entity_num(); ++n)
         {
@@ -239,7 +259,10 @@ void    heron_network_thread::half_exit()
 
 sint   heron_network_thread::register_routine(heron_routine *rt)
 {
-        m_pool.insert_element(rt->m_routine_id, rt);
+        bool ret = m_pool.insert_element(rt->m_routine_id, rt);
+	if (ret){
+		cout << "ret=1" << endl;
+	}
 
         if(rt->get_changed_events() != 0)
         {
@@ -270,15 +293,16 @@ sint   heron_network_thread::register_routine(heron_routine *rt)
 void    heron_network_thread::run()
 {
         while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
-		react();
-		usleep(1000);
-        }
-        while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
-		usleep(1000);
+		dispose_events(5);
+		process_timers();
+		struct timespec timeout, remain;
+		timeout.tv_sec = 0;
+		timeout.tv_nsec = 1000 * 1000;
+		nanosleep(&timeout, &remain);
         }
 }
 
-void    heron_network_thread::process_events(ulong routine_id, const unsigned events)
+void    heron_network_thread::process_events(ulong routine_id, heron_event events)
 {
         heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
         if(nullptr == rt)
@@ -287,40 +311,17 @@ void    heron_network_thread::process_events(ulong routine_id, const unsigned ev
                                 routine_id, events);
                 return        ;
         }
-
-        if(events & EPOLLOUT)
-        {
-                rt->m_writable = true;
-                if(rt->m_writable)
-                {
-                        //delete writable event
+	/*
+	//delete writable event
                         struct  epoll_event ev;
                         ev.events = rt->get_managed_events() & (~EPOLLOUT);
                         ev.data.u64 = rt->m_routine_id;
                         if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
-                        {
+                        {       
                                 m_log_writer->log_event( "failed to depress writable=%u",
                                                 ev.events);
                         }
-                }
-        }
-        if(events & EPOLLIN)
-        {
-        }
-
-        if(events & EPOLLERR)
-        {
-                rt->m_close_mark = true;
-        }
-
-        if(events & EPOLLRDHUP)
-        {
-                //this is not even an error
-        }
-
-        if(events & EPOLLHUP)
-        {
-                rt->m_close_mark = true;
-        }
+	*/
+	rt->on_events(events);
 }
 }}//namespace heron::tati

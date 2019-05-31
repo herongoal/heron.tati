@@ -88,32 +88,23 @@ private:
 	heron_engine(){}
 
 	void log_alert(const char *format, ...){
-		char   buf[1024];
-
 		va_list ap;
 		va_start(ap, format);
-		int msg_len = vsnprintf(buf, sizeof(buf), format, ap);
+		sint    result = log_append(log_level_panic, format, ap);
 		va_end(ap);
-		cout << "alert:" << string(buf,msg_len) << endl;
 	}
 	void log_vital(const char *format, ...){
-		char   buf[1024];
-
 		va_list ap;
 		va_start(ap, format);
-		int msg_len = vsnprintf(buf, sizeof(buf), format, ap);
+		sint    result = log_append(log_level_panic, format, ap);
 		va_end(ap);
-		cout << "vital:" << string(buf,msg_len) << endl;
 	}
 
 	void log_fatal(const char *format, ...){
-		 char   buf[1024];
-
-		 va_list ap;
-		 va_start(ap, format);
-		 int msg_len = vsnprintf(buf, sizeof(buf), format, ap);
-		 va_end(ap);
-		 cout << "fatal:" << string(buf,msg_len) << endl;
+		va_list ap;
+		va_start(ap, format);
+		sint    result = log_append(log_level_panic, format, ap);
+		va_end(ap);
 	}
 
 	/*

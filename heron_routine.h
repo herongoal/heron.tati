@@ -24,7 +24,7 @@ public:
         heron_routine(ulong label, sint fd):m_fd(fd), m_managed_events(0){}
         virtual         ~heron_routine(){}
 
-        virtual	sint    on_event(heron_event ev) = 0;
+        virtual	sint    on_events(heron_event ev) = 0;
         virtual sint	append_send_data(const void*, uint) = 0;
 
         virtual bool    vital() const {
@@ -86,7 +86,7 @@ public:
 	static  heron_tcp_routine*      create(uint label, int fd);
         heron_tcp_routine();
         virtual ~heron_tcp_routine();
-        sint on_event(heron_event ev);
+        sint on_events(heron_event ev);
         sint do_connect(ulong, const char *ipaddr, uint16_t port);
 	sint check_conn_state(int err);
 	virtual sint    append_send_data(const void *data, unsigned len);

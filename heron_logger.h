@@ -6,6 +6,8 @@
 #include "heron_routine.h"
 #include <iostream>
 #include <stdarg.h>
+#include <cstdio>
+#include <sys/time.h>
 
 
 using namespace std;
@@ -22,6 +24,8 @@ enum    log_level{
 	log_level_panic = 7,
         log_level_fatal = 8,
 };
+
+sint	log_append(log_level level, const char *fmt, va_list ap);
 
 class	heron_synch_buffer;
 class   heron_log_reader:public heron_routine{
@@ -85,11 +89,21 @@ public:
 	}
 protected:
 	sint	log_append(log_level level, const char *fmt, va_list ap){
-		char*	levels[] = {"trace","debug","event","alert",
+		const   char*	levels[] = {"trace","debug","event","alert",
 			"error","vital","panic","fatal"};
-		sint shift=5;
 		char	buf[1024] = { 0 };
-		memcpy(buf,levels[level-1],shift);
+
+		struct	timeval		m_time;
+		struct  tm  tt;
+
+		gettimeofday(&m_time, nullptr);
+		localtime_r(&m_time.tv_sec, &tt);
+
+		sint shift = snprintf(buf, sizeof(buf), "[%04d%02d%02d %02d:%02d:%02d-%s]",
+				tt.tm_year + 1900, tt.tm_mon, tt.tm_mday,
+				tt.tm_hour, tt.tm_min, tt.tm_sec, levels[level-1]);
+
+
 		sint len = vsnprintf(buf+shift, sizeof(buf)-shift, fmt, ap);
 		buf[len+shift]='\n';
 		cout << buf << endl;

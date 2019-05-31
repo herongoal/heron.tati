@@ -45,7 +45,7 @@ heron_tcp_routine*    heron_tcp_routine::create(uint label, int fd)
 
 
 
-int heron_tcp_routine::on_event(heron_event ev)
+int heron_tcp_routine::on_events(heron_event ev)
 {
 
     if(heron_socket_readable == ev)

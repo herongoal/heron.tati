@@ -12,21 +12,34 @@
 
 using namespace std;
 namespace heron{namespace tati{
+ sint    log_append(log_level level, const char *fmt, va_list ap){
+	 const   char*   levels[] = {"trace","debug","event","alert",
+		 "error","vital","panic","fatal"};
+	 char    buf[1024] = { 0 };
+
+	 struct  timeval         m_time;
+	 struct  tm  tt;
+
+	 gettimeofday(&m_time, nullptr);
+	 localtime_r(&m_time.tv_sec, &tt);
+
+	 sint shift = snprintf(buf, sizeof(buf), "[%04d%02d%02d %02d:%02d:%02d-%s]",
+			 tt.tm_year + 1900, tt.tm_mon, tt.tm_mday,
+			 tt.tm_hour, tt.tm_min, tt.tm_sec, levels[level-1]);
+
+
+	 sint len = vsnprintf(buf+shift, sizeof(buf)-shift, fmt, ap);
+	 buf[len+shift]='\n';
+	 cout << buf << endl;
+	 return  heron_result_state::success;
+ }
+
 void    log_fatal(const char *format, ...)
 {
-                        //append_log_prefix(log_fatal);
-
-                        char   buf_pos[1024];
-                        int     buf_len = 0;
-	cout << "fatal:" << format << endl;
-
-                        va_list ap;
-                        va_start(ap, format);
-                        int msg_len = vsnprintf(buf_pos, buf_len, format, ap);
-                        va_end(ap);
-
-	cout << "fatal:" << string(buf_pos,msg_len) << endl;
-                        //append_log_data(msg_len);
+	va_list ap;
+	va_start(ap, format);
+	sint    result = log_append(log_level_panic, format, ap);
+	va_end(ap);
 }
 
 

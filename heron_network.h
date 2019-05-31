@@ -19,7 +19,7 @@ class   heron_network_thread{
 public:
         heron_network_thread():m_pool(32*1024){}
 	static  heron_network_thread* create(heron_engine *engine);
-	void	process_events(ulong routine_id, uint events);
+	void	process_events(ulong routine_id, heron_event events);
 	void	set_routine_timeout(ulong routine_id, int timeout_ms);
 	void	process_timers(){}
 	slong   gen_monotonic_ms();
@@ -30,7 +30,7 @@ public:
 	uint    get_changed_events() const{
                 return  EPOLLIN & ~m_managed_events;
         }
-        void    react();
+        void    dispose_events(sint timeout_in_ms);
 	sint	init();
 	static void*	start(void* arg);
 	int	m_epoll_fd;
@@ -43,7 +43,7 @@ protected:
         heron_channel_routine*    m_channel_routine;
 
 	void	half_exit();
-	sint	m_managed_events;
+	heron_event	m_managed_events;
 	void	run();
 	heron_pool      m_pool;
 	friend  class   heron_engine;
@@ -61,9 +61,7 @@ public:
 	sint    append_send_data(const void *data, unsigned len){
 		return  0;
 	}
-	sint    on_event(heron_event ev){
-		return	0;
-	}
+	sint    on_events(heron_event ev);
 
 	uint	get_changed_events(){
 		return  EPOLLIN & ~m_managed_events;

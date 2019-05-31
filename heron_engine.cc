@@ -86,11 +86,12 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
         for(uint n = 0; n < m_instance->m_proxy_num; ++n){
                 m_instance->m_proxies[n] = heron_network_thread::create(m_instance);
 		if (nullptr == m_instance->m_proxies[n]){
-			m_instance->log_fatal("failed to create worker thread");
+			m_instance->log_fatal("failed to create network thread");
 			delete	m_instance;
 			m_instance = nullptr;
 			return	nullptr;
 		}
+		m_instance->log_fatal("create network thread=%d", n);
         }
 
         for(uint n = 0; n < m_instance->m_worker_num; ++n){
@@ -202,7 +203,7 @@ sint    heron_engine::start_worker_threads()
 {
 	for(uint n = 0; n < m_worker_num; ++n){
                 heron_worker_thread *thread=m_workers[n];
-                sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, &thread);
+                sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, thread);
                 if (ret != heron_result_state::success){
 			log_fatal("create worker-thread=%d failed", thread->m_proxy_id);
 			return ret;
@@ -232,7 +233,7 @@ sint    heron_engine::start_network_threads()
 {
 	for(uint n = 0; n < m_proxy_num; ++n){
 		heron_network_thread *thread=m_proxies[n];
-                sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, &thread);
+                sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, thread);
                 if (ret != heron_result_state::success){
                         m_instance->log_fatal("failed to create network thread");
 			return ret;
