@@ -2,6 +2,7 @@
 #include "heron_logger.h"
 #include "heron_engine.h"
 #include "heron_network.h"
+#include "heron_factory.h"
 #include "heron_routine.h"
 #include <sys/epoll.h>
 #include <arpa/inet.h>
@@ -11,17 +12,6 @@
 
 
 namespace   heron{namespace tati{
-heron_listen_routine* heron_listen_routine::create(heron_engine *engine, sint fd)
-{
-        heron_listen_routine *sr = new heron_listen_routine(0, fd);
-        if(nullptr == sr) 
-        {   
-                engine->log_fatal( "heron_listen_routine.create bad_alloc,close fd=%d", fd);
-                ::close(fd);
-        }   
-	return  sr; 
-}
-
 heron_listen_routine::~heron_listen_routine()
 {
 }
@@ -37,32 +27,6 @@ sint	heron_listen_routine::on_events(heron_event events)
 		return	-1;
 	}
 	return	heron_result_state::success;
-}
-
-heron_network_thread*   heron_network_thread::create(heron_engine *engine)
-{
-	heron_network_thread*   thread = new heron_network_thread();
-	thread->m_network_channel = heron_synch_channel::create(engine, 1);
-        if (nullptr == thread->m_network_channel){
-                engine->log_fatal("");
-                delete  thread;
-                return  nullptr;
-        }
-        thread->m_control_channel = heron_synch_channel::create(engine, 1);
-        if (nullptr == thread->m_control_channel){
-                engine->log_fatal("");
-		delete	thread;
-                return  nullptr;
-        }
-
-	thread->m_epoll_fd = epoll_create(32768);
-	if (thread->m_epoll_fd < 0){
-                engine->log_fatal("create epoll error");
-		exit(0);
-		delete	thread;
-                return  nullptr;
-	}
-        return  thread;
 }
 
 void    heron_network_thread::dispose_events(sint timeout_in_ms)
@@ -118,7 +82,7 @@ int     heron_listen_routine::on_readable()
 
                 int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
                 if(conn_fd >= 0){
-			heron_tcp_routine *rtn = heron_tcp_routine::create(0, conn_fd);
+			heron_tcp_routine *rtn = heron_factory::create_tcp_routine(0, conn_fd);
 			m_proxy->register_routine(rtn);
 			
                         m_logger->log_event("new con");

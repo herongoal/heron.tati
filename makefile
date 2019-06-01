@@ -1,6 +1,6 @@
 TARGET=libheron_tati.a
 OBJS = heron_buffer.o heron_logger.o heron_routine.o heron_channel.o heron_pool.o heron_protocol.o heron_define.o heron_timer.o \
-       heron_process.o heron_worker.o heron_engine.o \
+       heron_process.o heron_factory.o heron_worker.o heron_engine.o \
        heron_network.o \
 
 

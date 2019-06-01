@@ -1,4 +1,5 @@
 #include "heron_engine.h"
+#include "heron_factory.h"
 
 
 #include <pthread.h>
@@ -40,7 +41,7 @@ heron_engine*	heron_engine::m_instance = nullptr;
 ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uint16_t port)
 {
 	int fd = 0;
-        heron_listen_routine *rtn = heron_listen_routine::create(this, fd);
+        heron_listen_routine *rtn = heron_factory::create_listen_routine(this, fd);
 
         //rtn->add_routine(rtn);
         log_vital( "create_service_routine,origin=%d,routine_id=%lu,"
@@ -50,6 +51,16 @@ ulong    heron_engine::register_listen_port(ulong label, const char *ipaddr, uin
         return  rtn->m_routine_id;
 }
 
+sint    heron_engine::create_channels(){
+        for(sint n = 0; n < m_proxy_num + m_worker_num; ++n){
+		m_synch_channels[n] = heron_synch_channel::create(this, n+1);
+		if (nullptr == m_synch_channels[n]){
+			return	-1;
+		}
+	}
+	return	heron_result_state::success;
+}
+
 heron_engine*   heron_engine::create(const string &log_file, log_level level, uint slice_kb, uint proxy_num, uint worker_num)
 {
 	if(heron_engine::get_instance()!=nullptr){
@@ -57,12 +68,12 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
 		return	nullptr;
 	}
 
-	if(proxy_num > sizeof(m_instance->m_proxies)/sizeof(m_instance->m_proxies[0])){
+	if(proxy_num > sizeof(m_instance->m_network_threads)/sizeof(m_instance->m_network_threads[0])){
 		m_instance->log_fatal("proxy num");
 		return	nullptr;
 	}
 
-	if(worker_num > sizeof(m_instance->m_workers)/sizeof(m_instance->m_workers[0])){
+	if(worker_num > sizeof(m_instance->m_worker_threads)/sizeof(m_instance->m_worker_threads[0])){
 		m_instance->log_fatal("proxy num");
 		return	nullptr;
 	}
@@ -71,8 +82,8 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
 	m_instance->m_worker_num = worker_num;
 	m_instance->m_proxy_num = proxy_num;
 
-	bzero(m_instance->m_proxies, sizeof(m_instance->m_proxies));
-	bzero(m_instance->m_workers, sizeof(m_instance->m_workers));
+	bzero(m_instance->m_network_threads, sizeof(m_instance->m_network_threads));
+	bzero(m_instance->m_worker_threads, sizeof(m_instance->m_worker_threads));
 	bzero(m_instance->m_listen_addrs, sizeof(m_instance->m_listen_addrs));
 
 	m_instance->m_process_thread = new heron_process_thread();
@@ -84,8 +95,8 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
 	}
 
         for(uint n = 0; n < m_instance->m_proxy_num; ++n){
-                m_instance->m_proxies[n] = heron_network_thread::create(m_instance);
-		if (nullptr == m_instance->m_proxies[n]){
+                m_instance->m_network_threads[n] = heron_factory::create_network_thread(m_instance);
+		if (nullptr == m_instance->m_network_threads[n]){
 			m_instance->log_fatal("failed to create network thread");
 			delete	m_instance;
 			m_instance = nullptr;
@@ -95,8 +106,8 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
         }
 
         for(uint n = 0; n < m_instance->m_worker_num; ++n){
-                m_instance->m_workers[n] = new heron_worker_thread();
-		if (nullptr == m_instance->m_workers[n]){
+                m_instance->m_worker_threads[n] = new heron_worker_thread();
+		if (nullptr == m_instance->m_worker_threads[n]){
 			m_instance->log_fatal("");
 			delete	m_instance;
 			m_instance = nullptr;
@@ -195,7 +206,7 @@ void    heron_engine::clear_resource()
 sint    heron_engine::start_worker_threads()
 {
 	for(uint n = 0; n < m_worker_num; ++n){
-                heron_worker_thread *thread=m_workers[n];
+                heron_worker_thread *thread=m_worker_threads[n];
                 sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, thread);
                 if (ret != heron_result_state::success){
 			log_fatal("create worker-thread=%d failed", thread->m_proxy_id);
@@ -225,7 +236,7 @@ sint    heron_engine::start_process_thread()
 sint    heron_engine::start_network_threads()
 {
 	for(uint n = 0; n < m_proxy_num; ++n){
-		heron_network_thread *thread=m_proxies[n];
+		heron_network_thread *thread=m_network_threads[n];
                 sint ret = pthread_create(&thread->m_thread, nullptr, thread->start, thread);
                 if (ret != heron_result_state::success){
                         m_instance->log_fatal("failed to create network thread");
@@ -329,14 +340,14 @@ sint    heron_engine::listen_at_port(const char *ipaddr, ushort port)
 	log_fatal("%d listen",fd);
 
 	for(uint n = 0; n < m_proxy_num; ++n){
-		heron_listen_routine *rtn = heron_listen_routine::create(this, fd);
+		heron_listen_routine *rtn = heron_factory::create_listen_routine(this, fd);
 		if (nullptr == rtn){
 			log_fatal("failed to create listen routine: fd=%d", fd);
 			return	-1;
 		}
-		rtn->m_proxy = m_proxies[n];
+		rtn->m_proxy = m_network_threads[n];
 		log_vital("Create-Listen-Routine: fd=%d", fd);
-		sint result = m_proxies[n]->register_routine(rtn);
+		sint result = m_network_threads[n]->register_routine(rtn);
 		if (heron_result_state::success!=result){
 			log_fatal("failed to register listen routine to proxy=%d", n+1);
 			return	result;

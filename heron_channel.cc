@@ -128,6 +128,9 @@ heron_synch_channel*	heron_synch_channel::create(heron_engine *engine, uint chan
 
         if(fcntl(channel->m_socketpair[2], F_SETFL, O_NONBLOCK) < 0)
         {
+		if (engine == nullptr){
+			cout << "bork" << endl;
+		}
                 engine->log_fatal("Create-Channel.set-nonblock error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
 				channel_id, errno, strerror(errno));
 		return nullptr;
@@ -149,6 +152,10 @@ heron_synch_channel*	heron_synch_channel::create(heron_engine *engine, uint chan
         if(setsockopt(channel->m_socketpair[1], SOL_SOCKET, SO_RCVBUF, &buf_len, sizeof(buf_len)) < 0){
                 engine->log_alert("Create-Channel.set-rcvbuf error: channel_id=%d,fd=%d,errno=%d,errmsg=%s",
 				channel_id, channel->m_socketpair[0], errno, strerror(errno));
+	}
+
+	for(sint n = 0; n < sizeof(channel->m_synch_buffs)/sizeof(channel->m_synch_buffs[0]); ++n){
+		channel->m_synch_buffs[n] = heron_synch_buffer::create(buf_len);
 	}
 
 	return  channel;

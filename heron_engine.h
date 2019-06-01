@@ -73,9 +73,7 @@ public:
 		return  m_state;
 	}
 private:
-	friend  class   heron_synch_channel;
-	friend  class   heron_network_thread;
-	friend  class   heron_listen_routine;
+	friend  class   heron_factory;
 	struct	listen_endpoint{
 		sint	fd;
 		ushort	port;
@@ -110,6 +108,7 @@ private:
 		return	result;
 	}
 
+	sint	create_channels();
 	/*
 		each network thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data
 		each heavy work thread has a pair of channel as well as a socketpair connected to process thread, used to transfer logic data
@@ -118,11 +117,15 @@ private:
 	*/
 	static  heron_engine*	 m_instance;
 	struct  sockaddr_in      m_listen_addrs[32];
+	friend	class	heron_synch_channel;
+	friend	class	heron_factory;
 	uint    m_proxy_num;
 	uint    m_worker_num;
 
-	heron_network_thread*    m_proxies[4];
-	heron_worker_thread*     m_workers[2];
+	heron_network_thread*    m_network_threads[2];
+	heron_worker_thread*     m_worker_threads[2];
+	heron_synch_channel*     m_synch_channels[8];
+
 	heron_process_thread*	 m_process_thread;
 };
 }}//namespace heron::tati

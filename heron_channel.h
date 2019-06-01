@@ -66,7 +66,7 @@ private:
                 m_rpos(0), m_wpos(0), m_buff(nullptr)
         {
         }
-	friend	class	heron_log_writer;
+	friend	class	heron_factory;
         const unsigned int              m_capacity;
         std::atomic<unsigned int>       m_rpos;
         std::atomic<unsigned int>       m_wpos;
@@ -78,12 +78,11 @@ class	heron_engine;
 
 class	heron_synch_channel{
 public:
-	heron_synch_channel(){}
 	static	heron_synch_channel*	create(heron_engine *engine, uint channel_id);
 private:
+	heron_synch_channel(){}
 	heron_synch_buffer*	m_synch_buffs[2];
 	int			m_socketpair[2];
-	heron_channel_routine*	m_routines[2];
 };
 
 class	heron_channel_routine:public heron_routine{

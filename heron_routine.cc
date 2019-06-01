@@ -29,32 +29,6 @@ heron_tcp_routine::~heron_tcp_routine()
 }
 
 
-heron_tcp_routine*    heron_tcp_routine::create(uint label, int fd)
-{
-        if(-1 == fcntl(fd, F_SETFL, O_NONBLOCK))
-        {
-                ::close(fd);
-                return  nullptr;
-        }
-
-        heron_tcp_routine *rtn = new heron_tcp_routine(label, fd);
-
-	rtn->m_send = new heron_buffer(32 * 1024);
-	rtn->m_recv = new heron_buffer(32 * 1024);
-
-	if (nullptr == rtn->m_send || nullptr == rtn->m_recv){
-		delete	rtn;
-		return	nullptr;
-	}
-
-	return	rtn;
-}
-
-
-
-
-
-
 int heron_tcp_routine::on_events(heron_event events)
 {
 	cout << "tcp routine on events" << endl;

@@ -18,8 +18,10 @@ class	heron_routine;
 class	heron_engine;
 class   heron_network_thread{
 public:
-        heron_network_thread():m_pool(32*1024){}
-	static  heron_network_thread* create(heron_engine *engine);
+        heron_network_thread():m_pool(32*1024){
+		m_network_channel = nullptr;
+		m_control_channel = nullptr;
+	}
 	void	process_events(sint fd, heron_event events);
 	void	set_routine_timeout(sint fd, int timeout_ms);
 	void	process_timers(){}
@@ -36,6 +38,7 @@ public:
 	static void*	start(void* arg);
 	int	m_epoll_fd;
 	uint	m_proxy_id;
+
 protected:
 	heron_synch_channel*      m_network_channel;
 	heron_synch_channel*      m_control_channel;
@@ -47,12 +50,13 @@ protected:
 	heron_event	m_managed_events;
 	void	run();
 	heron_pool      m_pool;
+	friend  class   heron_factory;
 	friend  class   heron_engine;
 	pthread_t	m_thread;
 };
+
 class   heron_listen_routine:public heron_routine{
 public:
-        static  heron_listen_routine*     create(heron_engine* engine, sint fd);
 	virtual ~heron_listen_routine();
 
 	virtual bool    vital() const{
@@ -76,6 +80,7 @@ public:
 
 private:
 	heron_listen_routine(uint label, int fd):heron_routine(label,fd){}
+	friend	class		heron_factory;
 	friend	class		heron_engine;
 	heron_network_thread*	m_proxy;
 	heron_log_writer*	m_logger;
@@ -84,7 +89,6 @@ private:
 
 class   heron_tcp_routine: public heron_routine{
 public:
-        static  heron_tcp_routine*      create(uint label, int fd);
         heron_tcp_routine(uint label, int fd):heron_routine(label, fd){}
         virtual ~heron_tcp_routine();
         sint on_events(heron_event ev);
