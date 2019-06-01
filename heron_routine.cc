@@ -37,7 +37,17 @@ heron_tcp_routine*    heron_tcp_routine::create(uint label, int fd)
                 return  nullptr;
         }
 
-        return  new heron_tcp_routine(label, fd);
+        heron_tcp_routine *rtn = new heron_tcp_routine(label, fd);
+
+	rtn->m_send = new heron_buffer(32 * 1024);
+	rtn->m_recv = new heron_buffer(32 * 1024);
+
+	if (nullptr == rtn->m_send || nullptr == rtn->m_recv){
+		delete	rtn;
+		return	nullptr;
+	}
+
+	return	rtn;
 }
 
 
@@ -45,14 +55,15 @@ heron_tcp_routine*    heron_tcp_routine::create(uint label, int fd)
 
 
 
-int heron_tcp_routine::on_events(heron_event ev)
+int heron_tcp_routine::on_events(heron_event events)
 {
-
-    if(heron_socket_readable == ev)
+	cout << "tcp routine on events" << endl;
+    if((heron_socket_readable & events)!=0)
     {
-
+	return	on_readable();
     }
-    else    if(heron_socket_read_hup)
+
+    if((heron_socket_read_hup&events)!=0)
     {
         /**
          * process epollrdhup event, which is offten triggered by
@@ -61,7 +72,8 @@ int heron_tcp_routine::on_events(heron_event ev)
 
         m_logger->log_event( "on_read_hup was triggered");
     }
-    else    if(heron_socket_peer_hup)
+
+    if(heron_socket_peer_hup)
     {
         /*epollhup event,which is offten triggered 
          * by crushing of remote peer and so on.*/
@@ -72,7 +84,7 @@ int heron_tcp_routine::on_events(heron_event ev)
 
 uint        heron_tcp_routine::get_changed_events()
 {
-	uint        events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
+	uint        events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP;
 	if(heron_engine::get_instance()->get_state() == heron_engine::state_starting){
 		if(!m_writable || m_send->data_len() > 0){
 			return  (tcp_events & ~m_managed_events) | EPOLLOUT;
@@ -230,9 +242,9 @@ sint    heron_tcp_routine::do_connect(ulong label, const char *ipaddr, ushort po
 
 int     heron_tcp_routine::on_readable()
 {
-        int result = do_nonblock_recv(*m_recv);
-	//forward to main——thread
-        return  0;
+        sint result = do_nonblock_recv(*m_recv);
+	cout << "tcp routine:readable result=" << result << endl;
+        return  result;
 }
 
 void    set_flags(int fd)

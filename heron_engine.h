@@ -87,24 +87,27 @@ private:
 	uchar   m_state;
 	heron_engine(){}
 
-	void log_alert(const char *format, ...){
+	sint	log_alert(const char *format, ...){
 		va_list ap;
 		va_start(ap, format);
 		sint    result = log_append(log_level_panic, format, ap);
 		va_end(ap);
+		return	result;
 	}
-	void log_vital(const char *format, ...){
+	sint	log_vital(const char *format, ...){
 		va_list ap;
 		va_start(ap, format);
 		sint    result = log_append(log_level_panic, format, ap);
 		va_end(ap);
+		return	result;
 	}
 
-	void log_fatal(const char *format, ...){
+	sint	log_fatal(const char *format, ...){
 		va_list ap;
 		va_start(ap, format);
 		sint    result = log_append(log_level_panic, format, ap);
 		va_end(ap);
+		return	result;
 	}
 
 	/*

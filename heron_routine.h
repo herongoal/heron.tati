@@ -21,7 +21,7 @@ void    unregister_events(sint epoll_fd, heron_routine *rt);
 
 class        heron_routine{
 public:
-        heron_routine(ulong label, sint fd):m_fd(fd), m_managed_events(0){}
+        heron_routine(ulong label, sint fd):m_managed_events(0), m_fd(fd){}
         virtual         ~heron_routine(){}
 
         virtual	sint    on_events(heron_event ev) = 0;

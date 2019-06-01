@@ -20,13 +20,13 @@ class   heron_network_thread{
 public:
         heron_network_thread():m_pool(32*1024){}
 	static  heron_network_thread* create(heron_engine *engine);
-	void	process_events(ulong routine_id, heron_event events);
-	void	set_routine_timeout(ulong routine_id, int timeout_ms);
+	void	process_events(sint fd, heron_event events);
+	void	set_routine_timeout(sint fd, int timeout_ms);
 	void	process_timers(){}
 	slong   gen_monotonic_ms();
 	void	inspect();
-	sint	send_message(ulong dest_routine_id, const void *data, unsigned len);
-	sint	close_routine(ulong routine_id);
+	sint	send_message(sint fd, const void *data, unsigned len);
+	sint	close_routine(sint fd);
 	sint	register_routine(heron_routine *rt);
 	uint    get_changed_events() const{
                 return  EPOLLIN & ~m_managed_events;

@@ -116,7 +116,7 @@ protected:
 
 
 		sint len = vsnprintf(buf+shift, sizeof(buf)-shift, fmt, ap);
-		buf[len+shift]='\n';
+		buf[len+shift]='\0';
 		cout << buf << endl;
 		return	heron_result_state::success;
 	}

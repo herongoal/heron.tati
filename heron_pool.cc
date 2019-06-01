@@ -61,6 +61,7 @@ void*   heron_pool::remove_element(ulong id)
 	node->m_prev = &m_node_pool;
 	m_node_pool.m_next->m_prev = node;
 	m_node_pool.m_next = node;
+	return	nullptr;
 }
 
 void*   heron_pool::search_element(ulong id)

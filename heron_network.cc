@@ -29,12 +29,14 @@ heron_listen_routine::~heron_listen_routine()
 sint	heron_listen_routine::on_events(heron_event events)
 {
         if(events & heron_socket_readable){
+		cout << "sssssss+++++" << endl;
 		return	on_readable();
         }
 
 	if (events &(~heron_socket_readable)){
 		return	-1;
 	}
+	return	heron_result_state::success;
 }
 
 heron_network_thread*   heron_network_thread::create(heron_engine *engine)
@@ -117,6 +119,7 @@ int     heron_listen_routine::on_readable()
                 int conn_fd = accept(m_fd, (struct sockaddr *)&addr, &len);
                 if(conn_fd >= 0){
 			heron_tcp_routine *rtn = heron_tcp_routine::create(0, conn_fd);
+			m_proxy->register_routine(rtn);
 			
                         m_logger->log_event("new con");
                 }
@@ -137,21 +140,21 @@ void    heron_listen_routine::on_error()
 }
 
 
-sint    heron_network_thread::send_message(ulong dest_routine_id, const void *data, uint len)
+sint    heron_network_thread::send_message(sint dest_fd, const void *data, uint len)
 {
-        heron_routine *rt = (heron_routine *)m_pool.search_element(dest_routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(dest_fd);
 
         if(nullptr == rt)
         {
                 m_logger->log_event( "send_message to routine=%ld, not exist",
-                                dest_routine_id);
+                                dest_fd);
                 return        false;
         }
 
         if(!rt->append_send_data(data, len))
         {
                 m_logger->log_event( "send_message to routine=%ld, failed",
-                                dest_routine_id );
+                                dest_fd );
                 return        false;
         }
         return        true;
@@ -188,7 +191,7 @@ void        heron_network_thread::inspect()
                 {
                         if(rt->m_close_mark || rt->inspect() < 0)
                         {
-                                m_pool.remove_element(rt->m_routine_id);
+                                m_pool.remove_element(rt->m_fd);
                                 delete        rt;
                         }
                         else
@@ -204,29 +207,29 @@ void        heron_network_thread::inspect()
         }
 }
 
-void    heron_network_thread::set_routine_timeout(ulong routine_id, int timeout_ms)
+void    heron_network_thread::set_routine_timeout(sint fd, int timeout_ms)
 {
-        heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(fd);
         if(nullptr != rt)
         {
                 rt->m_timeout = timeout_ms;
         }
 }
 
-sint    heron_network_thread::close_routine(ulong routine_id)
+sint    heron_network_thread::close_routine(sint fd)
 {
-        heron_routine *rt = (heron_routine *)m_pool.remove_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.remove_element(fd);
 
         if(nullptr != rt)
         {
-                m_logger->log_event("close_routine routine_id=%lu", routine_id);
+                m_logger->log_event("close_routine fd=%lu", fd);
                 //unregister_events(m_epoll_fd, rt);
                 delete  rt;
         }
         else
         {
-                m_logger->log_event( "close_routine routine_id=%ld not found",
-                                routine_id);
+                m_logger->log_event( "close_routine fd=%ld not found",
+                                fd);
         }
 	return 0;
 }
@@ -260,9 +263,12 @@ void    heron_network_thread::half_exit()
 
 sint   heron_network_thread::register_routine(heron_routine *rt)
 {
-        bool ret = m_pool.insert_element(rt->m_routine_id, rt);
+        bool ret = m_pool.insert_element(rt->m_fd, rt);
 	if (ret){
 		cout << "ret=1" << endl;
+	}else{
+		cout << "fatal" << endl;
+		exit(0);
 	}
 
         if(rt->get_changed_events() != 0)
@@ -270,7 +276,7 @@ sint   heron_network_thread::register_routine(heron_routine *rt)
                 const int events = rt->get_changed_events();
                 struct  epoll_event ev;
                 ev.events = EPOLLIN;
-                ev.data.u64 = rt->m_routine_id;
+                ev.data.u64 = rt->m_fd;
 
                 if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
                 {
@@ -422,20 +428,21 @@ int     heron_tcp_routine::do_nonblock_write(const void *buf, unsigned len, unsi
         return  sent;
 }
 
-void    heron_network_thread::process_events(ulong routine_id, heron_event events)
+void    heron_network_thread::process_events(sint fd, heron_event events)
 {
-        heron_routine *rt = (heron_routine *)m_pool.search_element(routine_id);
+        heron_routine *rt = (heron_routine *)m_pool.search_element(fd);
         if(nullptr == rt)
         {
-                m_logger->log_event("process_events,routine_id=%lu,events=%u",
-                                routine_id, events);
+                m_logger->log_event("process_events,fd=%lu,events=%u",
+                                fd, events);
                 return        ;
         }
+	cout << "sss=" << fd << endl;
 	/*
 	//delete writable event
                         struct  epoll_event ev;
                         ev.events = rt->get_managed_events() & (~EPOLLOUT);
-                        ev.data.u64 = rt->m_routine_id;
+                        ev.data.u64 = rt->m_fd;
                         if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
                         {       
                                 m_logger->log_event( "failed to depress writable=%u",
