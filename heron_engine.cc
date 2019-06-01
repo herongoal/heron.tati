@@ -120,13 +120,6 @@ int     heron_engine::init()
 		log_fatal("init process thread result=%d", result);
 		return  result;
 	}
-	log_vital("init process thread success");
-        int ret = pthread_create(&m_process_thread->m_thread, nullptr, m_process_thread->start, m_process_thread);
-        if (ret != heron_result_state::success){
-                m_instance->log_fatal("failed to create process thread");
-		return	result;
-        }
-        log_vital("create process thread finished");
         return  heron_result_state::success;
 }
 
@@ -288,12 +281,6 @@ sint    heron_engine::start_threads()
 	//start listen
 	//start active workers
 
-	m_process_thread->init();
-	int ret = pthread_create(&m_process_thread->m_thread, nullptr, m_process_thread->start, &m_process_thread);
-	if (ret != 0){
-		m_instance->log_fatal("failed to create process thread");
-	}
-	log_vital("create process thread finished");
 	return	heron_result_state::success;
 }
 

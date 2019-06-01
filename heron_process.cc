@@ -31,6 +31,7 @@ sint    heron_process_thread::react()
 
 void* heron_process_thread::start(void* arg)
 {
+	heron_process_thread *thread = static_cast<heron_process_thread*>(arg);
                 sigset_t        sig_set;
                 sigemptyset(&sig_set);
                 sigaddset(&sig_set, SIGTERM);
@@ -43,8 +44,7 @@ void* heron_process_thread::start(void* arg)
                 sigaddset(&sig_set, SIGXFSZ);
                 sigaddset(&sig_set, SIGTRAP);
                 pthread_sigmask(SIG_BLOCK, &sig_set, nullptr);
-
-        return  (void *)0;
+	return	thread->run();
 }
 
 sint    heron_process_thread::process_timers()
@@ -79,7 +79,7 @@ void    heron_process_thread::half_exit()
 	//do not accept new channels
 }
 
-void    heron_process_thread::run()
+void*   heron_process_thread::run()
 {
 	while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
 		react();
@@ -87,5 +87,6 @@ void    heron_process_thread::run()
 	while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
 		react();
 	}
+	return	nullptr;
 }
 }}//namespace heron::tati

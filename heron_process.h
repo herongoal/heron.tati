@@ -21,7 +21,7 @@ public:
 	sint	init();
 	sint	react();
 	static void  *start(void *arg);
-	void    run();
+	void*   run();
 protected:
 	void	half_exit();
 	heron_pool	m_pool;
