@@ -42,7 +42,7 @@ protected:
         heron_channel_routine*    m_channel_routine;
 
 	void	half_exit();
-	void	run();
+	void*	run();
 	friend  class   heron_factory;
 	friend  class   heron_engine;
 	pthread_t	m_thread;

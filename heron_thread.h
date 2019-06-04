@@ -22,7 +22,7 @@ public:
 
 	virtual ~heron_thread(){
 	}
-	void*	run();
+	virtual void*	run();
 
 protected:
 	friend class	heron_factory;

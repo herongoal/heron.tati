@@ -225,7 +225,7 @@ void    heron_network_thread::half_exit()
         //do not accept new channels
 }
 
-void    heron_network_thread::run()
+void*   heron_network_thread::run()
 {
         while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
 		dispose_events(5);
@@ -235,6 +235,7 @@ void    heron_network_thread::run()
 		timeout.tv_nsec = 1000 * 1000;
 		nanosleep(&timeout, &remain);
         }
+	return	nullptr;
 }
 
 int     heron_tcp_routine::do_nonblock_recv(heron_buffer &cb)

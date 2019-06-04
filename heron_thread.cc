@@ -61,7 +61,7 @@ sint   heron_thread::register_routine(heron_routine *rt)
                 }
                 else
                 {
-                        m_logger->log_event( "add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
+                        m_logger->log_event( "failed to add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
                                         m_epoll_fd,rt->m_fd,events, errno, strerror(errno));
                 }
         }

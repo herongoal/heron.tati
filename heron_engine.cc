@@ -80,20 +80,20 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
 	bzero(m_instance->m_threads, sizeof(m_instance->m_threads));
 	bzero(m_instance->m_listen_addrs, sizeof(m_instance->m_listen_addrs));
 
-	m_instance->m_threads[m_instance->m_thread_created] = new (std::nothrow)heron_process_thread();
-	if (nullptr == m_instance->m_threads[m_instance->m_thread_created]){
-                m_instance->log_fatal("failed to create process-thread=%d", m_instance->m_thread_created);
+	heron_process_thread *process_thread = heron_factory::create_process_thread(m_instance, m_instance->m_thread_created+1);
+	if (nullptr == process_thread){
+                m_instance->log_fatal("failed to create process-thread=%d", m_instance->m_thread_created+1);
 		delete	m_instance;
 		m_instance = nullptr;
 		return	nullptr;
 	}
-	++m_instance->m_thread_created;
+	m_instance->m_threads[m_instance->m_thread_created++] = process_thread;
 	m_instance->log_vital("create process-thread[%d] finished", m_instance->m_thread_created);
 
         for(uint n = 0; n < m_instance->m_proxy_num; ++n){
-                heron_network_thread *thread = heron_factory::create_network_thread(m_instance, m_instance->m_thread_created);
+                heron_network_thread *thread = heron_factory::create_network_thread(m_instance, m_instance->m_thread_created+1);
 		if (nullptr == thread){
-			m_instance->log_fatal("failed to create network-thread", m_instance->m_thread_created);
+			m_instance->log_fatal("failed to create network-thread", m_instance->m_thread_created+1);
 			delete	m_instance;
 			m_instance = nullptr;
 			return	nullptr;
@@ -103,9 +103,9 @@ heron_engine*   heron_engine::create(const string &log_file, log_level level, ui
         }
 
 	for(uint n = 0; n < m_instance->m_worker_num; ++n){
-                heron_worker_thread *thread = heron_factory::create_worker_thread(m_instance, m_instance->m_thread_created);
+                heron_worker_thread *thread = heron_factory::create_worker_thread(m_instance, m_instance->m_thread_created+1);
                 if (nullptr == thread){
-                        m_instance->log_fatal("failed to create worker-thread[%d]", m_instance->m_thread_created);
+                        m_instance->log_fatal("failed to create worker-thread[%d]", m_instance->m_thread_created+1);
                         delete  m_instance;
                         m_instance = nullptr;
                         return  nullptr;
@@ -130,6 +130,7 @@ int     heron_engine::init()
 		log_fatal("init process thread result=%d", result);
 		return  result;
 	}
+	log_vital("init done");
         return  heron_result_state::success;
 }
 
@@ -250,6 +251,7 @@ sint    heron_engine::start_threads()
                         m_instance->log_fatal("failed to create network thread");
                         return ret;
                 }
+		m_instance->log_fatal("thread[%d] started", n+1);
         }
 	return	heron_result_state::success;
 }

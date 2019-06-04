@@ -112,15 +112,15 @@ private:
 		logs were transfer from threads to main threads via channels as well. so socketpairs were created as well
 		contrl signals were transfer via socketpair.
 	*/
-	static  heron_engine*	 m_instance;
-	struct  sockaddr_in      m_listen_addrs[32];
-	friend	class	heron_synch_channel;
-	friend	class	heron_factory;
-	uint    m_thread_created;
-	uint    m_proxy_num;
-	uint    m_worker_num;
+	static  heron_engine*   m_instance;
+	struct  sockaddr_in     m_listen_addrs[32];
+	friend	class		heron_synch_channel;
+	friend	class		heron_factory;
 
-	heron_thread*           m_threads[4];
+	uint                    m_thread_created;
+	uint                    m_proxy_num;
+	uint                    m_worker_num;
+	heron_thread*           m_threads[8];
 	heron_synch_channel*    m_synch_channels[8];
 };
 }}//namespace heron::tati
