@@ -154,7 +154,7 @@ heron_synch_channel*	heron_synch_channel::create(heron_engine *engine, uint chan
 				channel_id, channel->m_socketpair[0], errno, strerror(errno));
 	}
 
-	for(sint n = 0; n < sizeof(channel->m_synch_buffs)/sizeof(channel->m_synch_buffs[0]); ++n){
+	for(uint n = 0; n < sizeof(channel->m_synch_buffs)/sizeof(channel->m_synch_buffs[0]); ++n){
 		channel->m_synch_buffs[n] = heron_synch_buffer::create(buf_len);
 	}
 

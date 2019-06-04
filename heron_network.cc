@@ -225,42 +225,6 @@ void    heron_network_thread::half_exit()
         //do not accept new channels
 }
 
-sint   heron_network_thread::register_routine(heron_routine *rt)
-{
-        bool ret = m_pool.insert_element(rt->m_fd, rt);
-	if (ret){
-		cout << "ret=1" << endl;
-	}else{
-		cout << "fatal" << endl;
-		exit(0);
-	}
-
-        if(rt->get_changed_events() != 0)
-        {
-                const int events = rt->get_changed_events();
-                struct  epoll_event ev;
-                ev.events = EPOLLIN;
-                ev.data.u64 = rt->m_fd;
-
-                if(epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, rt->m_fd, &ev) == 0)
-                {
-                        m_logger->log_event("done add_routine.epoll_ctl,events=%d, errmsg=%s",
-                                        events, strerror(errno));
-                }
-                else
-                {
-                        m_logger->log_event( "add_routine.epoll_ctl,epoll_fd=%d,fd=%d,events=%d, errno=%d,msg=%s",
-                                        m_epoll_fd,rt->m_fd,events, errno, strerror(errno));
-                }
-        }
-        else
-        {
-                m_logger->log_event("add_routine no_events");
-        }
-
-	return	heron_result_state::success;
-}
-
 void    heron_network_thread::run()
 {
         while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
@@ -357,6 +321,7 @@ sint    heron_tcp_routine::append_send_data(const void *data, uint len)
         if(!m_writable)
         {
         }
+	return	heron_result_state::success;
 }
 
 int     heron_tcp_routine::do_nonblock_write(const void *buf, unsigned len, unsigned &sent)

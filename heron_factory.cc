@@ -1,12 +1,40 @@
 #include "heron_factory.h"
+#include "heron_process.h"
 #include "heron_network.h"
+#include "heron_worker.h"
 #include "heron_engine.h"
 #include <unistd.h>
 #include <fcntl.h>
 
 
 namespace heron{namespace tati{
-heron_network_thread*   heron_factory::create_network_thread(heron_engine *engine){
+heron_process_thread*   heron_factory::create_process_thread(heron_engine *engine, uint id){
+        heron_process_thread*   thread = new heron_process_thread();
+
+        thread->m_epoll_fd = epoll_create(32768);
+        if (thread->m_epoll_fd < 0){
+                engine->log_fatal("create epoll error");
+                exit(0);
+                delete  thread;
+                return  nullptr;
+        }
+        return  thread;
+}
+
+heron_worker_thread*   heron_factory::create_worker_thread(heron_engine *engine, uint id){
+        heron_worker_thread*   thread = new heron_worker_thread();
+
+        thread->m_epoll_fd = epoll_create(32768);
+        if (thread->m_epoll_fd < 0){
+                engine->log_fatal("create epoll error");
+                exit(0);
+                delete  thread;
+                return  nullptr;
+        }
+        return  thread;
+}
+
+heron_network_thread*   heron_factory::create_network_thread(heron_engine *engine, uint id){
         heron_network_thread*   thread = new heron_network_thread();
 
         thread->m_epoll_fd = epoll_create(32768);

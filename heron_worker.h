@@ -1,27 +1,31 @@
-#ifndef	_HERON_WORKER_H_
-#define	_HERON_WORKER_H_
+#ifndef _HERON_WORKER_H_
+#define _HERON_WORKER_H_
 
 
 #include "heron_define.h"
-#include "heron_logger.h"
-#include "heron_channel.h"
+#include "heron_thread.h"
+#include "heron_pool.h"
 #include <pthread.h>
 
 
-namespace heron{namespace tati{
-class	heron_worker_thread{
-public:
-	sint init();
-	static void *start(void *arg);
+namespace   heron{namespace   tati{
+void    on_connected(const heron_context &ctx);
+void    on_closed(const heron_context &ctx);
+void    on_data(const heron_context &ctx);
+void    on_timer(const heron_context &ctx);
 
+class	heron_worker_thread:public heron_thread{
+public:
+	~heron_worker_thread(){
+	}
+	sint	process_timers();
+	sint	react();
+	void*   run();
 protected:
-	uint	m_proxy_id;
-	void*	run();
-	heron_channel_routine*  m_channel_routine;
-	heron_log_writer*       m_log_writer;
-	friend class	heron_engine;
-	pthread_t	m_thread;
-};//end of class heron_worker_thread
+	void	half_exit();
+	friend  class   heron_engine;
+};
 }}//namespace heron::tati
 
-#endif//_HERON_WORKER_H_
+
+#endif //_HERON_WORKER_H_

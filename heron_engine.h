@@ -8,7 +8,7 @@
 #include "heron_routine.h"
 #include "heron_network.h"
 #include "heron_process.h"
-#include "heron_worker.h"
+#include "heron_thread.h"
 #include <signal.h>
 #include <stdarg.h>
 #include <string>
@@ -46,9 +46,6 @@ public:
         static  void    signal_handle(int sigid, siginfo_t *si, void *unused);
 
 
-	sint    start_worker_threads();
-	sint    start_process_thread();
-	sint    start_network_threads();
 	sint    start_threads();
 	sint    start_service();
 	sint    stop_service(){
@@ -83,7 +80,7 @@ private:
 
 	vector<listen_endpoint>	m_endpoints;
 	uchar   m_state;
-	heron_engine(){}
+	heron_engine():m_thread_created(0){}
 
 	sint	log_alert(const char *format, ...){
 		va_list ap;
@@ -119,14 +116,12 @@ private:
 	struct  sockaddr_in      m_listen_addrs[32];
 	friend	class	heron_synch_channel;
 	friend	class	heron_factory;
+	uint    m_thread_created;
 	uint    m_proxy_num;
 	uint    m_worker_num;
 
-	heron_network_thread*    m_network_threads[2];
-	heron_worker_thread*     m_worker_threads[2];
-	heron_synch_channel*     m_synch_channels[8];
-
-	heron_process_thread*	 m_process_thread;
+	heron_thread*           m_threads[4];
+	heron_synch_channel*    m_synch_channels[8];
 };
 }}//namespace heron::tati
 

@@ -3,6 +3,7 @@
 
 
 #include "heron_define.h"
+#include "heron_thread.h"
 #include "heron_routine.h"
 #include "heron_pool.h"
 #include "heron_channel.h"
@@ -16,9 +17,9 @@ namespace   heron{namespace tati{
 class	heron_log_writer;
 class	heron_routine;
 class	heron_engine;
-class   heron_network_thread{
+class   heron_network_thread:public heron_thread{
 public:
-        heron_network_thread():m_pool(32*1024){
+        heron_network_thread(){
 		m_network_channel = nullptr;
 		m_control_channel = nullptr;
 	}
@@ -29,14 +30,8 @@ public:
 	void	inspect();
 	sint	send_message(sint fd, const void *data, unsigned len);
 	sint	close_routine(sint fd);
-	sint	register_routine(heron_routine *rt);
-	uint    get_changed_events() const{
-                return  EPOLLIN & ~m_managed_events;
-        }
         void    dispose_events(sint timeout_in_ms);
-	sint	init();
 	static void*	start(void* arg);
-	int	m_epoll_fd;
 	uint	m_proxy_id;
 
 protected:
@@ -47,9 +42,7 @@ protected:
         heron_channel_routine*    m_channel_routine;
 
 	void	half_exit();
-	heron_event	m_managed_events;
 	void	run();
-	heron_pool      m_pool;
 	friend  class   heron_factory;
 	friend  class   heron_engine;
 	pthread_t	m_thread;
@@ -82,7 +75,7 @@ private:
 	heron_listen_routine(uint label, int fd):heron_routine(label,fd){}
 	friend	class		heron_factory;
 	friend	class		heron_engine;
-	heron_network_thread*	m_proxy;
+	heron_thread*		m_proxy;
 	heron_log_writer*	m_logger;
 	static const int        s_reuse_port;
 };

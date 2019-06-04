@@ -3,6 +3,7 @@
 
 
 #include "heron_define.h"
+#include "heron_thread.h"
 #include "heron_pool.h"
 #include <pthread.h>
 
@@ -13,18 +14,16 @@ void    on_closed(const heron_context &ctx);
 void    on_data(const heron_context &ctx);
 void    on_timer(const heron_context &ctx);
 
-class	heron_process_thread{
+class	heron_process_thread:public heron_thread{
 public:
-	heron_process_thread();
-	~heron_process_thread();
+	~heron_process_thread(){
+	}
 	sint	process_timers();
-	sint	init();
 	sint	react();
 	static void  *start(void *arg);
 	void*   run();
 protected:
 	void	half_exit();
-	heron_pool	m_pool;
 	friend  class   heron_engine;
 	pthread_t    m_thread;
 };

@@ -1,39 +1,65 @@
 #include "heron_worker.h"
 #include "heron_engine.h"
-
-#include <signal.h>
-#include <unistd.h>
+#include "heron_logger.h"
 
 
-namespace heron{namespace tati{
-void *heron_worker_thread::start(void *arg)
+namespace   heron{namespace tati{
+sint    heron_worker_thread::react()
 {
-	heron_worker_thread *thread = static_cast<heron_worker_thread *>(arg);
-	if(thread == nullptr){
-		thread->m_log_writer->log_fatal("bad params to start heron_work_thread");
-		return nullptr;
+        const sint result = process_timers();
+	if(result != heron_result_state::success){
+		return	result;
 	}
 
-	struct sigaction        sa;
-        sa.sa_flags = SA_SIGINFO;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_sigaction = nullptr;
+	{
+                struct timespec timeout, remain;
+                timeout.tv_sec = 0;
+                timeout.tv_nsec = 1000 * 1000;
+                nanosleep(&timeout, &remain);
+        }
+	return	heron_result_state::success;
+}
 
-        sigaction(SIGHUP, &sa, nullptr);
-        sigaction(SIGINT, &sa, nullptr);
-        sigaction(SIGQUIT, &sa, nullptr);
-        sigaction(SIGPIPE, &sa, nullptr);
-	return	thread->run();
+sint    heron_worker_thread::process_timers()
+{       
+	return	heron_result_state::success;
+}
+
+void    heron_worker_thread::half_exit()
+{
+	for(uint n = 0; n < m_pool.entity_num(); ++n){
+		heron_routine *rtn = static_cast<heron_routine *>(m_pool.current_element());
+		if (rtn->get_type() == 0){
+			//network_thread closing mode(no listen)
+			//networker 退出条件
+		}
+		else if(rtn->get_type() == 1){
+			//unregister readable events
+			//process all left messages
+		}
+		else if(rtn->get_type() == 2){
+			//process thread broadcast closing events for each routine
+		}
+		else {
+			//process thread broadcast closing events for each routine
+		}
+	}
+
+	//for passive sessions
+	//process all left messages(已经读到就处理，已经决定发送就发送完)
+	//什么时候推出？没有数据要发送
+
+	//do not accept new channels
 }
 
 void*   heron_worker_thread::run()
-{       
-        while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
-		usleep(1*1000);
-        }
-        while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
-		usleep(1*1000);
-        }
+{
+	while(heron_engine::get_instance()->get_state() == heron_engine::state_running){
+		react();
+	}
+	while(heron_engine::get_instance()->get_state() == heron_engine::state_exiting){
+		react();
+	}
 	return	nullptr;
 }
-}}
+}}//namespace heron::tati

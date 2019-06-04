@@ -53,6 +53,7 @@ int heron_tcp_routine::on_events(heron_event events)
          * by crushing of remote peer and so on.*/
         m_logger->log_event( "on_peer_hup was triggered");
     }
+    return	heron_result_state::success;
 }
 
 

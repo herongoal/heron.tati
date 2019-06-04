@@ -4,15 +4,6 @@
 
 
 namespace   heron{namespace tati{
-heron_process_thread::heron_process_thread():m_pool(20)
-{
-}
-
-sint	heron_process_thread::init()
-{
-        return  0;
-}
-
 sint    heron_process_thread::react()
 {
         const sint result = process_timers();
