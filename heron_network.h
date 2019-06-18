@@ -24,6 +24,8 @@ public:
 		m_control_channel = nullptr;
 	}
 	void	process_events(sint fd, heron_event events);
+	void	process_data(heron_routine *rtn);
+	sint	settle_routine(heron_routine *rtn, sint proxy_id);
 	void	set_routine_timeout(sint fd, int timeout_ms);
 	void	process_timers(){}
 	slong   gen_monotonic_ms();

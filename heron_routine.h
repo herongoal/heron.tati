@@ -15,6 +15,7 @@ class	heron_routine;
 typedef  void    (*conn_handle_routine)(heron_routine *rt, heron_event ev);
 typedef  void    (*data_handle_routine)(heron_routine *rt, heron_event ev);
 typedef  void    (*time_handle_routine)(heron_routine *rt, heron_event ev);
+typedef  sint    (*dispatch_routine)(heron_routine *rt);
 
 void    unregister_events(sint epoll_fd, heron_routine *rt);
 

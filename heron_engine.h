@@ -117,6 +117,7 @@ private:
 	friend	class		heron_synch_channel;
 	friend	class		heron_factory;
 
+	dispatch_routine	m_dispatch_routine;
 	uint                    m_thread_created;
 	uint                    m_proxy_num;
 	uint                    m_worker_num;

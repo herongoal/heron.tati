@@ -358,6 +358,55 @@ int     heron_tcp_routine::do_nonblock_write(const void *buf, unsigned len, unsi
         return  sent;
 }
 
+void	heron_network_thread::process_data(heron_routine *rtn){
+	if (heron_engine::get_instance()->center_process_data){
+		return forward_data(rtn);
+	}
+
+	sint    dst = heron_engine::get_instance()->m_dispatch_routine(rtn);
+	if (dst < 0){
+		m_logger->log_error("failed to get dest proxy for routine=%d", rtn->m_fd);
+		return	dst;
+	}
+	if (m_proxy_id != dst){
+		m_logger->log_error("dispatch routine to proxy");
+		return  settle_routine(rtn, dst);
+	} else{
+		m_logger->log_error("process data in place");
+		return  process_data(rtn, dst);
+	}
+}
+
+void    heron_network_thread::process_events(sint fd, heron_event events)
+{
+        heron_routine *rt = (heron_routine *)m_pool.search_element(fd);
+        if(nullptr == rt)
+        {
+                m_logger->log_event("process_events,fd=%lu,events=%u",
+                                fd, events);
+                return        ;
+        }
+	cout << "sss=" << fd << endl;
+	/*
+	//delete writable event
+                        struct  epoll_event ev;
+                        ev.events = rt->get_managed_events() & (~EPOLLOUT);
+                        ev.data.u64 = rt->m_fd;
+                        if(epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, rt->m_fd, &ev) != 0)
+                        {       
+                                m_logger->log_event( "failed to depress writable=%u",
+                                                ev.events);
+                        }
+	*/
+	rt->on_events(events);
+}
+}}//namespace heron::tati
+	//sint method = get_process_method(thread_id, rtn, msg);
+	//if process in place
+	//if process center
+	//if process specific proxy
+}
+
 void    heron_network_thread::process_events(sint fd, heron_event events)
 {
         heron_routine *rt = (heron_routine *)m_pool.search_element(fd);
